@@ -1,0 +1,177 @@
+#
+#
+#================================================================
+#   
+#   
+#   文件名称：user.mk
+#   创 建 者：肖飞
+#   创建日期：2019年10月25日 星期五 13时04分38秒
+#   修改日期：2021年08月23日 星期一 17时19分25秒
+#   描    述：
+#
+#================================================================
+
+include sal/sal.mk
+
+USER_C_INCLUDES += -Iapps
+USER_C_INCLUDES += -Iapps/modules
+USER_C_INCLUDES += -Iapps/modules/os
+USER_C_INCLUDES += -Iapps/modules/drivers
+USER_C_INCLUDES += -Iapps/modules/hardware
+USER_C_INCLUDES += -Iapps/modules/app
+USER_C_INCLUDES += -Iapps/modules/app/power_modules
+USER_C_INCLUDES += -Iapps/modules/app/net_client
+USER_C_INCLUDES += -Iapps/modules/tests
+
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/system
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/netif/ppp
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/lwip
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/lwip/apps
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/lwip/priv
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/lwip/prot
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/netif
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/compat/posix
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/compat/posix/arpa
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/compat/posix/net
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/compat/posix/sys
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/src/include/compat/stdc
+USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/system/arch
+
+C_INCLUDES += $(USER_C_INCLUDES)
+
+USER_C_SOURCES += apps/os_memory.c
+USER_C_SOURCES += apps/app.c
+USER_C_SOURCES += apps/uart_debug_handler.c
+USER_C_SOURCES += apps/probe_tool_handler.c
+USER_C_SOURCES += apps/channels_config.c
+USER_C_SOURCES += apps/can_config.c
+USER_C_SOURCES += apps/wiznet_spi.c
+USER_C_SOURCES += apps/storage_config.c
+ifeq ("$(origin TEST)", "command line")
+USER_C_SOURCES += apps/channels_communication_pseudo.c
+USER_C_SOURCES += apps/relay_boards_communication_pseudo.c
+else
+USER_C_SOURCES += apps/channels_communication.c
+USER_C_SOURCES += apps/relay_boards_communication.c
+endif
+USER_C_SOURCES += apps/modbus_addr_handler.c
+USER_C_SOURCES += apps/display_cache.c
+USER_C_SOURCES += apps/channels.c
+
+USER_C_SOURCES += apps/modules/app/config_utils.c
+USER_C_SOURCES += apps/modules/app/poll_loop.c
+USER_C_SOURCES += apps/modules/app/probe_tool.c
+USER_C_SOURCES += apps/modules/app/uart_debug.c
+USER_C_SOURCES += apps/modules/app/net_client/request.c
+USER_C_SOURCES += apps/modules/app/can_data_task.c
+USER_C_SOURCES += apps/modules/app/uart_data_task.c
+USER_C_SOURCES += apps/modules/app/usbh_user_callback.c
+USER_C_SOURCES += apps/modules/app/early_sys_callback.c
+USER_C_SOURCES += apps/modules/app/connect_state.c
+USER_C_SOURCES += apps/modules/app/can_command.c
+USER_C_SOURCES += apps/modules/app/display.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_huawei.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_increase.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_infy.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_pseudo.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_stategrid.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_yyln.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_winline.c
+USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_zte.c
+USER_C_SOURCES += apps/modules/hardware/flash.c
+USER_C_SOURCES += apps/modules/hardware/modbus_slave_txrx.c
+USER_C_SOURCES += apps/modules/hardware/modbus_spec.c
+USER_C_SOURCES += apps/modules/hardware/storage.c
+USER_C_SOURCES += apps/modules/hardware/storage_25lc1024.c
+USER_C_SOURCES += apps/modules/drivers/spi_txrx.c
+USER_C_SOURCES += apps/modules/drivers/can_txrx.c
+USER_C_SOURCES += apps/modules/drivers/can_ops_hal.c
+USER_C_SOURCES += apps/modules/drivers/usart_txrx.c
+USER_C_SOURCES += apps/modules/os/event_helper.c
+USER_C_SOURCES += apps/modules/os/callback_chain.c
+USER_C_SOURCES += apps/modules/os/bitmap_ops.c
+USER_C_SOURCES += apps/modules/os/iap.c
+USER_C_SOURCES += apps/modules/os/os_utils.c
+USER_C_SOURCES += apps/modules/os/net_utils.c
+USER_C_SOURCES += apps/modules/os/cpu_utils.c
+USER_C_SOURCES += apps/modules/os/object_class.c
+USER_C_SOURCES += apps/modules/os/log.c
+USER_C_SOURCES += apps/modules/tests/test_serial.c
+USER_C_SOURCES += apps/modules/os/soft_timer.c
+
+USER_C_SOURCES += Middlewares/Third_Party/LwIP/src/core/def.c
+USER_C_SOURCES += Middlewares/Third_Party/LwIP/src/core/ipv4/ip4_addr.c
+USER_C_SOURCES += Src/net_sockets.c
+
+C_SOURCES += $(USER_C_SOURCES)
+
+USER_CFLAGS += -DtraceTASK_SWITCHED_IN=StartIdleMonitor -DtraceTASK_SWITCHED_OUT=EndIdleMonitor
+USER_CFLAGS += -DSAL_HOOK
+USER_CFLAGS += -DLOG_CONFIG_FILE=\"log_config.h\"
+
+#USER_CFLAGS += -DLOG_DISABLE
+#USER_CFLAGS += -DALLOC_TRACE_DISABLE
+
+CFLAGS += $(USER_CFLAGS)
+
+#LDFLAGS += -u _printf_float -Wl,--wrap=srand  -Wl,--wrap=rand
+LDFLAGS += -u _printf_float
+
+IAP_FILE := apps/modules/os/iap.h
+
+define update-iap-include
+	if [ -f $(IAP_FILE) ]; then
+		touch $(IAP_FILE);
+	fi
+endef
+
+ifeq ("$(origin APP)", "command line")
+build-type := .app.stamps
+build-type-invalid := .bootloader.stamps
+CFLAGS += -DUSER_APP
+LDSCRIPT = STM32F407VGTx_FLASH_APP.ld
+#$(info $(shell $(update-iap-include)))
+$(info "build app!")
+else
+build-type := .bootloader.stamps
+build-type-invalid := .app.stamps
+LDSCRIPT = STM32F407VGTx_FLASH.ld
+#$(info $(shell $(update-iap-include)))
+$(info "build bootloader!")
+endif
+
+default: all
+
+all : $(build-type)
+
+$(build-type) :
+	-rm $(build-type-invalid)
+	$(shell $(update-iap-include))
+	touch $@
+
+cscope: all
+	rm cscope e_cs -rf
+	mkdir -p cscope
+	#$(silent)tags.sh prepare;
+	$(silent)touch dep_files;
+	$(silent)for f in $$(find . -type f -name "*.d" 2>/dev/null); do \
+		for i in $$(cat "$$f" | sed 's/^.*://g' | sed 's/[\\ ]/\n/g' | sort -h | uniq); do \
+			if test "$${i:0:1}" = "/";then \
+				echo "$$i" >> dep_files; \
+			else \
+				readlink -f "$$i" >> dep_files; \
+			fi; \
+		done; \
+	done;
+	$(silent)cat dep_files | sort | uniq | sed 's/^\(.*\)$$/\"\1\"/g' >> cscope/cscope.files;
+	$(silent)cat dep_files | sort | uniq >> cscope/ctags.files;
+	$(silent)rm dep_files
+	$(silent)tags.sh cscope;
+	$(silent)tags.sh tags;
+	$(silent)tags.sh env;
+
+clean: clean-cscope
+clean-cscope:
+	rm cscope e_cs -rf
