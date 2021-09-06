@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年08月26日 星期四 16时41分53秒
+ *   修改日期：2021年09月06日 星期一 17时28分10秒
  *   描    述：
  *
  *================================================================*/
@@ -19,7 +19,6 @@
 #include "object_class.h"
 #include "power_modules.h"
 #include "channels_communication.h"
-#include "relay_boards_communication.h"
 #include "channel_command.h"
 #include "modbus_data_value.h"
 #include "modbus_addr_handler.h"
@@ -145,7 +144,6 @@ char *get_power_module_policy_des(power_module_policy_t policy)
 	char *des = "unknow";
 
 	switch(policy) {
-			add_des_case(POWER_MODULE_POLICY_AVERAGE);
 			add_des_case(POWER_MODULE_POLICY_PRIORITY);
 
 		default: {
@@ -192,8 +190,6 @@ static void print_power_module_item_info(const uint8_t pad, power_module_item_in
 	_printf("%s\tsetting_output_voltage:%d\n", _pad, power_module_item_info->status.setting_output_voltage);
 	_printf("%s\tsetting_output_current:%d\n", _pad, power_module_item_info->status.setting_output_current);
 	_printf("%s\tsmooth_setting_output_current:%d\n", _pad, power_module_item_info->status.smooth_setting_output_current);
-	_printf("%s\trequire_relay_check_voltage:%d\n", _pad, power_module_item_info->status.require_relay_check_voltage);
-	_printf("%s\trequire_relay_check_current:%d\n", _pad, power_module_item_info->status.require_relay_check_current);
 	_printf("%s\tmodule_output_voltage:%d\n", _pad, power_module_item_info->status.module_output_voltage);
 	_printf("%s\tmodule_output_current:%d\n", _pad, power_module_item_info->status.module_output_current);
 	//_printf("%s\tconnect_state:%d\n", _pad, power_module_item_info->status.connect_state);
@@ -231,26 +227,6 @@ static void print_power_module_group_info(const uint8_t pad, power_module_group_
 	os_free(_pad);
 }
 
-static void print_relay_board_item_info(const uint8_t pad, relay_board_item_info_t *relay_board_item_info)
-{
-	char *_pad = (char *)os_calloc(1, pad + 1);
-
-	OS_ASSERT(_pad != NULL);
-	memset(_pad, '\t', pad);
-
-	_printf("%sboard_id:%d\n", _pad, relay_board_item_info->board_id);
-	_printf("%s\tchannel_id:%d\n", _pad, relay_board_item_info->channel_id);
-	_printf("%s\toffset:%d\n", _pad, relay_board_item_info->offset);
-	_printf("%s\tnumber:%d\n", _pad, relay_board_item_info->number);
-	_printf("%s\tconfig:0b%08x\n", _pad, u8_bin(relay_board_item_info->config));
-	_printf("%s\tremote_config:0b%08x\n", _pad, u8_bin(relay_board_item_info->remote_config));
-	//_printf("%s\ttemperature1:%d\n", _pad, relay_board_item_info->temperature1);
-	//_printf("%s\ttemperature2:%d\n", _pad, relay_board_item_info->temperature2);
-	//_printf("%s\tconnect_state:%d\n", _pad, relay_board_item_info->connect_state);
-
-	os_free(_pad);
-}
-
 static void print_channel_info(const uint8_t pad, channel_info_t *channel_info)
 {
 	char *_pad = (char *)os_calloc(1, pad + 1);
@@ -260,7 +236,6 @@ static void print_channel_info(const uint8_t pad, channel_info_t *channel_info)
 
 	_printf("%schannel_id:%d\n", _pad, channel_info->channel_id);
 	_printf("%s\tstate:%s\n", _pad, get_channel_state_des(channel_info->status.state));
-	_printf("%s\trelay_board_number:%d\n", _pad, channel_info->relay_board_number);
 	_printf("%s\trequire_output_voltage:%d\n", _pad, channel_info->status.require_output_voltage);
 	_printf("%s\trequire_output_current:%d\n", _pad, channel_info->status.require_output_current);
 	_printf("%s\trequire_work_state:%d\n", _pad, channel_info->status.require_work_state);
@@ -330,25 +305,6 @@ static int try_to_stop_channel(channel_info_t *channel_info)
 	return ret;
 }
 
-static int try_to_relay_check(channel_info_t *channel_info)
-{
-	int ret = -1;
-
-	channel_info->channel_request_state = CHANNEL_REQUEST_STATE_RELAY_CHECK;
-
-	if(channel_info->status.state == CHANNEL_STATE_IDLE) {
-		debug("channel_id %d start relay check", channel_info->channel_id);
-
-		ret = 0;
-	} else {
-		debug("channel_id %d start relay check with state %s",
-		      channel_info->channel_id,
-		      get_channel_state_des(channel_info->status.state));
-	}
-
-	return ret;
-}
-
 static void default_handle_channel_event(void *_channel_info, void *_channels_event)
 {
 	uint8_t match = 0;
@@ -391,8 +347,6 @@ static void default_handle_channel_event(void *_channel_info, void *_channels_ev
 		break;
 
 		case CHANNEL_EVENT_TYPE_RELAY_CHECK: {
-			if(try_to_relay_check(channel_info) != 0) {
-			}
 		}
 
 		default: {
@@ -490,12 +444,7 @@ static void handle_channel_state(channel_info_t *channel_info)
 				channel_info->status.state = CHANNEL_STATE_PREPARE_START;
 				debug("channel_id %d to state %s", channel_id, get_channel_state_des(channel_info->status.state));
 			} else if(channel_info->channel_request_state == CHANNEL_REQUEST_STATE_RELAY_CHECK) {
-				channels_info_t *channels_info = channel_info->channels_info;
-				relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-
 				channel_info->channel_request_state = CHANNEL_REQUEST_STATE_NONE;
-
-				relay_check_info->relay_check_request_state = RELAY_CHECK_REQUEST_STATE_START;
 				channel_info->status.state = CHANNEL_STATE_RELAY_CHECK;
 				debug("channel_id %d to state %s", channel_id, get_channel_state_des(channel_info->status.state));
 			}
@@ -637,17 +586,11 @@ static void handle_channel_state(channel_info_t *channel_info)
 		break;
 
 		case CHANNEL_STATE_RELAY_CHECK: {//自检中
-			channels_info_t *channels_info = channel_info->channels_info;
-			relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-
 			if(channel_info->channel_request_state == CHANNEL_REQUEST_STATE_STOP) {//关机
 				channel_info->channel_request_state = CHANNEL_REQUEST_STATE_NONE;
-				relay_check_info->relay_check_request_state = RELAY_CHECK_REQUEST_STATE_STOP;
 			} else {
-				if(relay_check_info->relay_check_state == RELAY_CHECK_STATE_NONE) {//自检操作完成
-					channel_info->status.state = CHANNEL_STATE_IDLE;
-					debug("channel_id %d to state %s", channel_id, get_channel_state_des(channel_info->status.state));
-				}
+				channel_info->status.state = CHANNEL_STATE_IDLE;
+				debug("channel_id %d to state %s", channel_id, get_channel_state_des(channel_info->status.state));
 			}
 		}
 		break;
@@ -743,15 +686,7 @@ void free_channels_info(channels_info_t *channels_info)
 
 static uint8_t get_power_module_group_number_per_pdu_group_config(pdu_group_config_t *pdu_group_config)
 {
-	uint8_t power_module_group_number = 0;
-	int i;
-
-	//当前组任意一个通道每个开关板上接的模块组数累加，就是当前组的模块组数
-	for(i = 0; i < pdu_group_config->relay_board_number_per_channel; i++) {
-		power_module_group_number += pdu_group_config->power_module_group_number_per_relay_board[i];
-	}
-
-	return power_module_group_number;
+	return pdu_group_config->channel_number;
 }
 
 static uint8_t get_power_module_group_number(pdu_config_t *pdu_config)
@@ -770,12 +705,9 @@ static uint8_t get_power_module_group_number(pdu_config_t *pdu_config)
 static uint8_t get_power_module_item_number_per_pdu_group_config(pdu_group_config_t *pdu_group_config)
 {
 	uint8_t power_module_number = 0;
-	int i;
 
-	//当前组任意一个通道每个开关板上接的模块组内的模块数数累加，就是当前组的模块数
-	for(i = 0; i < pdu_group_config->relay_board_number_per_channel; i++) {
-		power_module_number += pdu_group_config->power_module_group_number_per_relay_board[i] * pdu_group_config->power_module_number_per_power_module_group;
-	}
+	//一枪对应一个模块组
+	power_module_number += pdu_group_config->channel_number * pdu_group_config->power_module_number_per_power_module_group;
 
 	return power_module_number;
 }
@@ -806,20 +738,6 @@ static uint8_t get_channel_number(pdu_config_t *pdu_config)
 	return channel_number;
 }
 
-static uint8_t get_relay_board_item_number(pdu_config_t *pdu_config)
-{
-	uint8_t relay_board_item_number = 0;
-	int i;
-
-	for(i = 0; i < pdu_config->pdu_group_number; i++) {
-		pdu_group_config_t *pdu_group_config = &pdu_config->pdu_group_config[i];
-
-		relay_board_item_number += pdu_group_config->channel_number * pdu_group_config->relay_board_number_per_channel;
-	}
-
-	return relay_board_item_number;
-}
-
 static int channels_info_load_config(channels_info_t *channels_info)
 {
 	config_layout_t *config_layout = get_config_layout();
@@ -843,24 +761,17 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 
 	memset(channels_settings, 0, sizeof(channels_settings_t));
 
-	//pdu_config->policy = POWER_MODULE_POLICY_AVERAGE;
 	pdu_config->policy = POWER_MODULE_POLICY_PRIORITY;
 
 	pdu_config->pdu_group_number = 2;
 
 	pdu_group_config = &pdu_config->pdu_group_config[0];
 	pdu_group_config->channel_number = 5;
-	pdu_group_config->relay_board_number_per_channel = 1;
-	pdu_group_config->power_module_group_number_per_relay_board[0] = 5;
-	pdu_group_config->power_module_group_number_per_relay_board[1] = 0;
-	pdu_group_config->power_module_number_per_power_module_group = 2;
+	pdu_group_config->power_module_number_per_power_module_group = 3;
 
 	pdu_group_config = &pdu_config->pdu_group_config[1];
 	pdu_group_config->channel_number = 5;
-	pdu_group_config->relay_board_number_per_channel = 1;
-	pdu_group_config->power_module_group_number_per_relay_board[0] = 5;
-	pdu_group_config->power_module_group_number_per_relay_board[1] = 0;
-	pdu_group_config->power_module_number_per_power_module_group = 2;
+	pdu_group_config->power_module_number_per_power_module_group = 3;
 
 	channels_settings->power_module_type = POWER_MODULE_TYPE_WINLINE;
 	channels_settings->module_max_output_voltage = 10000;
@@ -927,19 +838,101 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 	struct list_head *n;
 	struct list_head *head;
 	pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
-	uint8_t module_group_size;
-	uint8_t power_module_group_to_remove_count = 0;
+	channels_info_t *channels_info = (channels_info_t *)channel_info->channels_info;
+	struct list_head list_unneeded_power_module_group = LIST_HEAD_INIT(list_unneeded_power_module_group);
+	channel_info_t *channel_info_item;
+	channel_info_t *channel_info_item_prev;
 
 	head = &channel_info->power_module_group_list;
-	module_group_size = list_size(head);
 
-	debug("channel_id %d reassign_module_group_number:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number);
-
-	if(module_group_size <= channel_info->status.reassign_module_group_number) {
-		return;
+	list_for_each_safe(pos, n, head) {
+		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
+		list_move_tail(&power_module_group_info->list, &list_unneeded_power_module_group);
 	}
 
-	power_module_group_to_remove_count = module_group_size - channel_info->status.reassign_module_group_number;
+	//left search
+	channel_info_item_prev = channel_info;
+	channel_info_item = channel_info;
+
+	while(channel_info_item != NULL) {
+		uint8_t next_channel_id;
+		uint8_t next_power_module_group_id;
+		power_module_group_info_t *power_module_group_info_item;
+
+		if(channel_info_item->channel_id == 0) {
+			next_channel_id = channels_info->channel_number - 1;
+		} else {
+			next_channel_id = channel_info_item->channel_id - 1;
+		}
+
+		channel_info_item = channels_info->channel_info + next_channel_id;
+
+		if(channel_info_item->pdu_group_info->pdu_group_id != pdu_group_info->pdu_group_id) {
+			continue;
+		}
+
+		if(list_contain(&channel_info_item->list, &pdu_group_info->channel_active_list) == 0) {
+			break;
+		}
+
+		next_power_module_group_id = next_channel_id;
+		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
+
+		if(list_contain(&power_module_group_info_item->list, &list_unneeded_power_module_group) != 0) {
+			break;
+		}
+
+		//恢复模块归属
+		list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+
+		//set relay channel_info_item_prev---channel_info_item, by id
+		//todo
+		
+		channel_info_item_prev = channel_info_item;
+	}
+
+	//right search
+	channel_info_item_prev = channel_info;
+	channel_info_item = channel_info;
+
+	while(channel_info_item != NULL) {
+		uint8_t next_channel_id;
+		uint8_t next_power_module_group_id;
+		power_module_group_info_t *power_module_group_info_item;
+
+		if(channel_info_item->channel_id == (channels_info->channel_number - 1)) {
+			next_channel_id = 0;
+		} else {
+			next_channel_id = channel_info_item->channel_id + 1;
+		}
+
+		channel_info_item = channels_info->channel_info + next_channel_id;
+
+		if(channel_info_item->pdu_group_info->pdu_group_id != pdu_group_info->pdu_group_id) {
+			continue;
+		}
+
+		if(list_contain(&channel_info_item->list, &pdu_group_info->channel_active_list) == 0) {
+			break;
+		}
+
+		next_power_module_group_id = next_channel_id;
+		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
+
+		if(list_contain(&power_module_group_info_item->list, &list_unneeded_power_module_group) != 0) {
+			break;
+		}
+
+		//恢复模块归属
+		list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+
+		//set relay channel_info_item_prev---channel_info_item, by id
+		//todo
+		
+		channel_info_item_prev = channel_info_item;
+	}
+
+	head = &list_unneeded_power_module_group;
 
 	list_for_each_safe(pos, n, head) {
 		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
@@ -949,11 +942,6 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
 		}
 		list_move_tail(&power_module_group_info->list, &pdu_group_info->power_module_group_deactive_list);
-		power_module_group_to_remove_count--;
-
-		if(power_module_group_to_remove_count == 0) {
-			break;
-		}
 	}
 }
 
@@ -969,15 +957,6 @@ static void free_power_module_group_for_active_channel_priority(pdu_group_info_t
 	}
 }
 
-static uint8_t get_disable_power_group_count(pdu_group_info_t *pdu_group_info)
-{
-	uint8_t count = 0;
-
-	count = list_size(&pdu_group_info->power_module_group_disable_list);
-
-	return count;
-}
-
 static uint8_t get_available_power_group_count(pdu_group_info_t *pdu_group_info)
 {
 	uint8_t count = 0;
@@ -988,39 +967,6 @@ static uint8_t get_available_power_group_count(pdu_group_info_t *pdu_group_info)
 	//计算将要被回收的模块组数
 	count += list_size(&pdu_group_info->power_module_group_deactive_list);
 
-	return count;
-}
-
-static uint8_t get_more_power_group_count_need(pdu_group_info_t *pdu_group_info)
-{
-	uint8_t count = 0;
-	channel_info_t *channel_info;
-	struct list_head *head;
-
-	head = &pdu_group_info->channel_active_list;
-
-	list_for_each_entry(channel_info, head, channel_info_t, list) {
-		if(list_size(&channel_info->power_module_group_list) == 0) {
-			count++;
-		}
-	}
-	return count;
-}
-
-//要启动的通道数
-static uint8_t get_start_channel_count(pdu_group_info_t *pdu_group_info)
-{
-	uint8_t count = 0;
-	channel_info_t *channel_info;
-	struct list_head *head;
-
-	head = &pdu_group_info->channel_active_list;
-
-	list_for_each_entry(channel_info, head, channel_info_t, list) {
-		if(channel_info->status.state == CHANNEL_STATE_PREPARE_START) {
-			count++;
-		}
-	}
 	return count;
 }
 
@@ -1036,288 +982,29 @@ static void cancel_last_start_channel(pdu_group_info_t *pdu_group_info)
 	list_move_tail(&channel_info->list, &pdu_group_info->channel_idle_list);
 }
 
-static void channel_free_power_module_group(channel_info_t *channel_info, uint8_t channel_free_power_module_group_count)
+static void clean_up_relay_map(pdu_group_info_t *pdu_group_info)
 {
-	struct list_head *pos;
-	struct list_head *n;
-	struct list_head *head;
-	pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
+	int i;
 
-	if(channel_free_power_module_group_count == 0) {
-		return;
+	for(i = 0; i < pdu_group_info->channel_number; i++) {
+		set_bitmap_value(pdu_group_info->relay_map, i, 0);
 	}
-
-	head = &channel_info->power_module_group_list;
-
-	list_for_each_safe(pos, n, head) {
-		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
-		power_module_item_info_t *power_module_item_info;
-		struct list_head *head1 = &power_module_group_info->power_module_item_list;
-		list_for_each_entry(power_module_item_info, head1, power_module_item_info_t, list) {
-			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
-		}
-		list_move_tail(&power_module_group_info->list, &pdu_group_info->power_module_group_deactive_list);
-		channel_free_power_module_group_count--;
-
-		if(channel_free_power_module_group_count == 0) {
-			return;
-		}
-	}
-}
-
-static void active_channel_list_remove_power_module_group(pdu_group_info_t *pdu_group_info, uint8_t more_power_module_group_count_need, uint8_t keep_count)
-{
-	channel_info_t *channel_info;
-	struct list_head *head;
-
-	head = &pdu_group_info->channel_active_list;
-
-	if(more_power_module_group_count_need == 0) {
-		return;
-	}
-
-	list_for_each_entry_reverse(channel_info, head, channel_info_t, list) {
-		uint8_t power_module_group_count;
-		uint8_t channel_free_power_module_group_count;
-
-		power_module_group_count = list_size(&channel_info->power_module_group_list);
-
-		if(power_module_group_count <= keep_count) {//没有可以剔除的模块组
-			continue;
-		}
-
-		channel_free_power_module_group_count = power_module_group_count - keep_count;
-
-		if(channel_free_power_module_group_count > more_power_module_group_count_need) {
-			channel_free_power_module_group_count = more_power_module_group_count_need;
-		}
-
-		if(channel_free_power_module_group_count > 0) {
-			channel_free_power_module_group(channel_info, channel_free_power_module_group_count);
-			more_power_module_group_count_need -= channel_free_power_module_group_count;
-		}
-
-		if(more_power_module_group_count_need == 0) {
-			break;
-		}
-	}
-
-	if(more_power_module_group_count_need != 0) {
-		debug("bug!!! more_power_module_group_count_need:%d", more_power_module_group_count_need);
-	}
-}
-
-static int pdu_group_info_free_power_module_group_average(pdu_group_info_t *pdu_group_info)
-{
-	int ret = -1;
-
-	//充电中的枪数
-	uint8_t active_channel_count;
-	//要启动的枪数
-	uint8_t start_channel_count;
-	//所有正常模块组数
-	uint8_t all_enable_power_module_group_count;
-	//平均每个通道可以用的模块组数
-	uint8_t average_power_module_group_per_channel;
-	//可用的模块组数
-	uint8_t available_power_module_group_count;
-	//需要从现在充电的枪中剔除多少个模块组
-	uint8_t more_power_module_group_count_need;
-
-	//释放所有即将停止充电的枪关联的模块组
-	free_power_module_group_for_stop_channel(pdu_group_info);
-
-	//获取需要充电的枪数
-	active_channel_count = list_size(&pdu_group_info->channel_active_list);
-	debug("active_channel_count:%d", active_channel_count);
-
-	if(active_channel_count == 0) {//如果没有枪需要充电，到这里模块组释放完毕
-		ret = 0;
-		return ret;
-	}
-
-	//获取启动充电的枪数
-	start_channel_count = get_start_channel_count(pdu_group_info);
-	debug("start_channel_count:%d", start_channel_count);
-
-	if(start_channel_count == 0) {//如果没有要启动的枪，到这里模块组释放完毕
-		ret = 0;
-		return ret;
-	}
-
-	//获取所有可用模块组数
-	all_enable_power_module_group_count = pdu_group_info->power_module_group_number - get_disable_power_group_count(pdu_group_info);
-	debug("all_enable_power_module_group_count:%d", all_enable_power_module_group_count);
-
-	if(all_enable_power_module_group_count == 0) {
-		debug("bug!!!");
-		return ret;
-	}
-
-	//计算平均每个需要充电的枪使用的模块组数
-	average_power_module_group_per_channel = all_enable_power_module_group_count / active_channel_count;
-	debug("average_power_module_group_per_channel:%d", average_power_module_group_per_channel);
-
-	if(average_power_module_group_per_channel == 0) {//模块组不够分了，停掉最后一个要启动的通道
-		cancel_last_start_channel(pdu_group_info);
-		return ret;
-	}
-
-	//计算剩余模块组数
-	available_power_module_group_count = get_available_power_group_count(pdu_group_info);
-	debug("available_power_module_group_count:%d", available_power_module_group_count);
-
-	//计算至少需要从正在充电枪中释放多少个模块组
-	more_power_module_group_count_need = 0;
-
-	if(start_channel_count * average_power_module_group_per_channel > available_power_module_group_count) {
-		more_power_module_group_count_need = start_channel_count * average_power_module_group_per_channel - available_power_module_group_count;
-	} else {//不需要再释放模块组，到这里模块组释放完毕
-		ret = 0;
-		return ret;
-	}
-
-	debug("more_power_module_group_count_need:%d", more_power_module_group_count_need);
-
-	//从正在充电的枪中释放模块组
-	active_channel_list_remove_power_module_group(pdu_group_info, more_power_module_group_count_need, average_power_module_group_per_channel);
-
-	ret = 0;
-	return ret;
 }
 
 static int pdu_group_info_free_power_module_group_priority(pdu_group_info_t *pdu_group_info)
 {
 	int ret = -1;
 
-	//可用的模块组数
-	uint8_t available_power_module_group_count;
-	//需要从现在充电的枪中剔除多少个模块组
-	uint8_t more_power_module_group_count_need;
+	//清理继电器
+	clean_up_relay_map(pdu_group_info);
 
-	//释放所有即将停止充电的枪关联的模块组
+	//链式分配模块间会相互牵扯,释放所有模块,重新计算
+	//释放要停机通道的模块
 	free_power_module_group_for_stop_channel(pdu_group_info);
-
-	//释放所有通道多余模块组数
+	//释放多余模块,并恢复需要的继电器
 	free_power_module_group_for_active_channel_priority(pdu_group_info);
 
-	//计算剩余模块组数
-	available_power_module_group_count = get_available_power_group_count(pdu_group_info);
-	debug("available_power_module_group_count:%d", available_power_module_group_count);
-
-	//新启动枪至少一个模块组的前提下,至少需要几个模块组
-	more_power_module_group_count_need = get_more_power_group_count_need(pdu_group_info);
-
-	if(more_power_module_group_count_need > available_power_module_group_count) {
-		more_power_module_group_count_need -= available_power_module_group_count;
-	} else {//不需要再释放模块组，到这里模块组释放完毕
-		ret = 0;
-		return ret;
-	}
-
-	debug("more_power_module_group_count_need:%d", more_power_module_group_count_need);
-
-	//从正在充电的枪中释放模块组
-	active_channel_list_remove_power_module_group(pdu_group_info, more_power_module_group_count_need, 1);
-
 	ret = 0;
-	return ret;
-}
-
-static void update_channels_relay_board_config(pdu_group_info_t *pdu_group_info)
-{
-	channel_info_t *channel_info;
-	power_module_group_info_t *power_module_group_info;
-	relay_board_item_info_t *relay_board_item_info;
-	relay_boards_com_info_t *relay_boards_com_info;
-	struct list_head *head;
-	struct list_head *head1;
-	int i;
-	channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
-
-	relay_boards_com_info = (relay_boards_com_info_t *)channels_info->relay_boards_com_info;
-
-	for(i = 0; i < channels_info->channel_number; i++) {
-		channel_info = channels_info->channel_info + i;
-
-		if(channel_info->pdu_group_info != pdu_group_info) {
-			debug("skip channel_id %d in pdu_group_id %d", channel_info->channel_id, channel_info->pdu_group_info->pdu_group_id);
-			continue;
-		}
-
-		debug("channel_id:%d, state:%s, relay_board_number:%d",
-		      channel_info->channel_id,
-		      get_channel_state_des(channel_info->status.state),
-		      channel_info->relay_board_number);
-
-		head = &channel_info->relay_board_item_list;
-		list_for_each_entry(relay_board_item_info, head, relay_board_item_info_t, list) {
-			relay_board_item_info->config = 0;
-		}
-
-		head = &channel_info->power_module_group_list;
-		list_for_each_entry(power_module_group_info, head, power_module_group_info_t, list) {
-			head1 = &channel_info->relay_board_item_list;
-			list_for_each_entry(relay_board_item_info, head1, relay_board_item_info_t, list) {
-				if(power_module_group_info->group_id < relay_board_item_info->offset) {
-					continue;
-				}
-
-				if(power_module_group_info->group_id >= relay_board_item_info->offset + relay_board_item_info->number) {
-					continue;
-				}
-
-				relay_board_item_info->config = set_u8_bits(relay_board_item_info->config,
-				                                power_module_group_info->group_id - relay_board_item_info->offset,
-				                                1);
-				print_relay_board_item_info(2, relay_board_item_info);
-			}
-		}
-
-		head = &channel_info->relay_board_item_list;
-		list_for_each_entry(relay_board_item_info, head, relay_board_item_info_t, list) {
-			print_relay_board_item_info(1, relay_board_item_info);
-
-			relay_boards_com_update_config(relay_boards_com_info, relay_board_item_info->board_id, relay_board_item_info->config);
-		}
-	}
-}
-
-static int pdu_group_relay_board_config_sync(pdu_group_info_t *pdu_group_info)
-{
-	int ret = 0;
-	channel_info_t *channel_info;
-	relay_board_item_info_t *relay_board_item_info;
-	struct list_head *head;
-	int i;
-	channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
-
-	for(i = 0; i < channels_info->channel_number; i++) {
-		channel_info = channels_info->channel_info + i;
-
-		if(channel_info->pdu_group_info != pdu_group_info) {
-			debug("skip channel_id %d in pdu_group_id %d", channel_info->channel_id, channel_info->pdu_group_info->pdu_group_id);
-			continue;
-		}
-
-		head = &channel_info->relay_board_item_list;
-		list_for_each_entry(relay_board_item_info, head, relay_board_item_info_t, list) {
-			if(relay_board_item_info->config != relay_board_item_info->remote_config) {
-				debug("channel_id %d board_id %d config %02x, remote config %02x",
-				      channel_info->channel_id,
-				      relay_board_item_info->board_id,
-				      relay_board_item_info->config,
-				      relay_board_item_info->remote_config);
-				ret = -1;
-				break;
-			}
-		}
-
-		if(ret != 0) {
-			break;
-		}
-	}
-
 	return ret;
 }
 
@@ -1338,7 +1025,6 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info,
 
 	list_for_each_safe(pos, n, head) {
 		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
-		relay_board_item_info_t *relay_board_item_info;
 		power_module_item_info_t *power_module_item_info;
 
 		head1 = &power_module_group_info->power_module_item_list;
@@ -1354,22 +1040,6 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info,
 		list_move_tail(&power_module_group_info->list, &channel_info->power_module_group_list);
 		debug("assign module group_id %d to channel_id %d", power_module_group_info->group_id, channel_info->channel_id);
 
-		head1 = &channel_info->relay_board_item_list;
-		list_for_each_entry(relay_board_item_info, head1, relay_board_item_info_t, list) {
-			uint8_t group_id = power_module_group_info->group_id;
-
-			if(group_id < relay_board_item_info->offset) {
-				continue;
-			}
-
-			if(group_id >= relay_board_item_info->offset + relay_board_item_info->number) {
-				continue;
-			}
-
-			//xiaofei clear power_module_group_info->relay_board_item_info
-			power_module_group_info->relay_board_item_info = relay_board_item_info;
-		}
-
 		count--;
 
 		if(count == 0) {
@@ -1379,49 +1049,6 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info,
 
 	if(count != 0) {
 		debug("bug!!!");
-	}
-}
-
-static void active_pdu_group_info_power_module_group_assign(pdu_group_info_t *pdu_group_info, uint8_t average_count, uint8_t available_count)
-{
-
-	channel_info_t *channel_info;
-	struct list_head *head;
-
-	head = &pdu_group_info->channel_active_list;
-
-	list_for_each_entry(channel_info, head, channel_info_t, list) {
-		uint8_t power_module_group_count = list_size(&channel_info->power_module_group_list);
-
-		if(power_module_group_count >= average_count) {
-			continue;
-		}
-
-		power_module_group_count = average_count - power_module_group_count;
-
-		if(power_module_group_count > available_count) {
-			power_module_group_count = available_count;
-		}
-
-		channel_info_assign_power_module_group(channel_info, power_module_group_count);
-		available_count -= power_module_group_count;
-
-		if(available_count == 0) {
-			break;
-		}
-	}
-
-	if(available_count == 0) {
-		return;
-	}
-
-	list_for_each_entry(channel_info, head, channel_info_t, list) {
-		channel_info_assign_power_module_group(channel_info, 1);
-		available_count -= 1;
-
-		if(available_count == 0) {
-			break;
-		}
 	}
 }
 
@@ -1522,45 +1149,6 @@ static void active_pdu_group_info_power_module_group_assign_priority(pdu_group_i
 	//}
 }
 
-static void pdu_group_info_assign_power_module_group_average(pdu_group_info_t *pdu_group_info)
-{
-	//充电中的枪数
-	uint8_t active_channel_count;
-	//所有正常模块组数
-	uint8_t all_enable_power_module_group_count;
-	//平均每个通道可以用的模块组数
-	uint8_t average_power_module_group_per_channel;
-	//可用的模块组数
-	uint8_t available_power_module_group_count;
-
-	//获取需要充电的枪数
-	active_channel_count = list_size(&pdu_group_info->channel_active_list);
-	debug("active_channel_count:%d", active_channel_count);
-
-	if(active_channel_count == 0) {//如果没有枪需要充电,不分配
-		return;
-	}
-
-	//获取所有可用模块组数
-	all_enable_power_module_group_count = pdu_group_info->power_module_group_number - get_disable_power_group_count(pdu_group_info);
-	debug("all_enable_power_module_group_count:%d", all_enable_power_module_group_count);
-
-	if(all_enable_power_module_group_count == 0) {
-		debug("bug!!!");
-		return;
-	}
-
-	//计算平均每个需要充电的枪使用的模块组数
-	average_power_module_group_per_channel = all_enable_power_module_group_count / active_channel_count;
-	debug("average_power_module_group_per_channel:%d", average_power_module_group_per_channel);
-
-	//计算剩余模块组数
-	available_power_module_group_count = get_available_power_group_count(pdu_group_info);
-	debug("available_power_module_group_count:%d", available_power_module_group_count);
-
-	active_pdu_group_info_power_module_group_assign(pdu_group_info, average_power_module_group_per_channel, available_power_module_group_count);
-}
-
 static void pdu_group_info_assign_power_module_group_priority(pdu_group_info_t *pdu_group_info)
 {
 	//充电中的枪数
@@ -1643,30 +1231,6 @@ static int channels_module_assign_ready(pdu_group_info_t *pdu_group_info)
 	return ret;
 }
 
-char *get_relay_check_state_des(relay_check_state_t state)
-{
-	char *des = "unknow";
-
-	switch(state) {
-			add_des_case(RELAY_CHECK_STATE_NONE);
-			add_des_case(RELAY_CHECK_STATE_START_SYNC);
-			add_des_case(RELAY_CHECK_STATE_PREPARE);
-			add_des_case(RELAY_CHECK_STATE_PREPARE_CONFIRM);
-			add_des_case(RELAY_CHECK_STATE_INSULATION_CHECK);
-			add_des_case(RELAY_CHECK_STATE_CHANNEL_MODULE_ID_CHECK);
-			add_des_case(RELAY_CHECK_STATE_CHANNEL_CONFIG);
-			add_des_case(RELAY_CHECK_STATE_CHANNEL_CONFIG_SYNC);
-			add_des_case(RELAY_CHECK_STATE_CHANNEL_CHECK);
-			add_des_case(RELAY_CHECK_STATE_STOP);
-
-		default: {
-		}
-		break;
-	}
-
-	return des;
-}
-
 typedef int (*pdu_group_info_free_power_module_group_t)(pdu_group_info_t *pdu_group_info);
 typedef void (*pdu_group_info_assign_power_module_group_t)(pdu_group_info_t *pdu_group_info);
 
@@ -1676,12 +1240,6 @@ typedef struct {
 	pdu_group_info_assign_power_module_group_t assign;
 } pdu_group_info_power_module_group_policy_t;
 
-static pdu_group_info_power_module_group_policy_t pdu_group_info_power_module_group_policy_average = {
-	.policy = POWER_MODULE_POLICY_AVERAGE,
-	.free = pdu_group_info_free_power_module_group_average,
-	.assign = pdu_group_info_assign_power_module_group_average,
-};
-
 static pdu_group_info_power_module_group_policy_t pdu_group_info_power_module_group_policy_priority = {
 	.policy = POWER_MODULE_POLICY_PRIORITY,
 	.free = pdu_group_info_free_power_module_group_priority,
@@ -1689,14 +1247,13 @@ static pdu_group_info_power_module_group_policy_t pdu_group_info_power_module_gr
 };
 
 static pdu_group_info_power_module_group_policy_t *pdu_group_info_power_module_group_policy_sz[] = {
-	&pdu_group_info_power_module_group_policy_average,
 	&pdu_group_info_power_module_group_policy_priority,
 };
 
 static pdu_group_info_power_module_group_policy_t *get_pdu_group_info_power_module_group_policy(uint8_t policy)
 {
 	int i;
-	pdu_group_info_power_module_group_policy_t *pdu_group_info_power_module_group_policy = &pdu_group_info_power_module_group_policy_average;
+	pdu_group_info_power_module_group_policy_t *pdu_group_info_power_module_group_policy = &pdu_group_info_power_module_group_policy_priority;
 
 	for(i = 0; i < ARRAY_SIZE(pdu_group_info_power_module_group_policy_sz); i++) {
 		pdu_group_info_power_module_group_policy_t *pdu_group_info_power_module_group_policy_item = pdu_group_info_power_module_group_policy_sz[i];
@@ -1745,8 +1302,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG: {//释放模块组后下发配置
-			update_channels_relay_board_config(pdu_group_info);
-
+			//todo
 			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG_SYNC;
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
@@ -1755,12 +1311,11 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG_SYNC: {//释放模块组后配置同步
-			if(pdu_group_relay_board_config_sync(pdu_group_info) == 0) {
-				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN;
-				debug("pdu_group_id %d channels_change_state to state %s",
-				      pdu_group_info->pdu_group_id,
-				      get_channels_change_state_des(pdu_group_info->channels_change_state));
-			}
+			//todo
+			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN;
+			debug("pdu_group_id %d channels_change_state to state %s",
+			      pdu_group_info->pdu_group_id,
+			      get_channels_change_state_des(pdu_group_info->channels_change_state));
 		}
 		break;
 
@@ -1788,8 +1343,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG: {//分配模块组后下发配置
-			update_channels_relay_board_config(pdu_group_info);
-
+			//todo
 			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG_SYNC;
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
@@ -1798,13 +1352,12 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG_SYNC: {//分配模块组后同步配置
-			if(pdu_group_relay_board_config_sync(pdu_group_info) == 0) {
-				channels_module_assign_ready(pdu_group_info);
-				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_IDLE;
-				debug("pdu_group_id %d channels_change_state to state %s",
-				      pdu_group_info->pdu_group_id,
-				      get_channels_change_state_des(pdu_group_info->channels_change_state));
-			}
+			//todo
+			channels_module_assign_ready(pdu_group_info);
+			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_IDLE;
+			debug("pdu_group_id %d channels_change_state to state %s",
+			      pdu_group_info->pdu_group_id,
+			      get_channels_change_state_des(pdu_group_info->channels_change_state));
 		}
 		break;
 
@@ -1838,7 +1391,6 @@ static void handle_pdu_group_deactive_list(pdu_group_info_t *pdu_group_info)
 
 		if(power_module_group_idle == 1) {
 			power_module_group_info->channel_info = NULL;
-			power_module_group_info->relay_board_item_info = NULL;
 			debug("set power module group_id %d idle!", power_module_group_info->group_id);
 			list_move_tail(&power_module_group_info->list, &pdu_group_info->power_module_group_idle_list);
 			continue;
@@ -1853,7 +1405,6 @@ static void handle_pdu_group_deactive_list(pdu_group_info_t *pdu_group_info)
 
 		if(power_module_group_disable == 1) {
 			power_module_group_info->channel_info = NULL;
-			power_module_group_info->relay_board_item_info = NULL;
 			debug("set power module group_id %d disable", power_module_group_info->group_id);
 			list_move_tail(&power_module_group_info->list, &pdu_group_info->power_module_group_disable_list);
 			continue;
@@ -2054,19 +1605,11 @@ static void power_module_item_set_out_voltage_current(power_module_item_info_t *
 	power_modules_info_t *power_modules_info = (power_modules_info_t *)power_module_item_info->power_modules_info;
 	power_module_group_info_t *power_module_group_info = (power_module_group_info_t *)power_module_item_info->power_module_group_info;
 	channel_info_t *channel_info = (channel_info_t *)power_module_group_info->channel_info;
-	relay_board_item_info_t *relay_board_item_info = (relay_board_item_info_t *)power_module_group_info->relay_board_item_info;
 	u_power_module_status_t u_power_module_status;
 	uint8_t power_off = 0;
 
 	if(channel_info != NULL) {
 		if(get_first_fault(channel_info->faults) != -1) {
-			voltage = 0;
-			current = 0;
-		}
-	}
-
-	if(relay_board_item_info != NULL) {
-		if(get_first_fault(relay_board_item_info->faults) != -1) {
 			voltage = 0;
 			current = 0;
 		}
@@ -2215,9 +1758,7 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 		break;
 
 		case POWER_MODULE_ITEM_STATE_ACTIVE_RELAY_CHECK: {
-			power_module_item_set_out_voltage_current(power_module_item_info,
-			        power_module_item_info->status.require_relay_check_voltage,
-			        power_module_item_info->status.require_relay_check_current);
+			power_module_item_set_out_voltage_current(power_module_item_info, 0, 0);
 		}
 		break;
 
@@ -2338,32 +1879,8 @@ static void handle_fan_state(channels_info_t *channels_info)
 	HAL_GPIO_WritePin(channels_config->gpio_port_fan, channels_config->gpio_pin_fan, state);
 }
 
-static void update_relay_board_item_info_state(relay_board_item_info_t *relay_board_item_info)
-{
-	uint32_t ticks = osKernelSysTick();
-	relay_boards_com_info_t *relay_boards_com_info = (relay_boards_com_info_t *)relay_board_item_info->relay_boards_com_info;
-
-	if(ticks_duration(ticks, relay_board_item_info->update_stamp) < (1 * 1000)) {
-		return;
-	}
-
-	relay_board_item_info->update_stamp = ticks;
-	relay_board_item_info->connect_state = relay_boards_com_get_connect_state(relay_boards_com_info, relay_board_item_info->board_id);
-}
-
-static void update_relay_boards_info_state(channels_info_t *channels_info)
-{
-	int i;
-
-	for(i = 0; i < channels_info->relay_board_item_number; i++) {
-		relay_board_item_info_t *relay_board_item_info = &channels_info->relay_board_item_info[i];
-
-		update_relay_board_item_info_state(relay_board_item_info);
-	}
-}
-
 static uint8_t update_power_module_policy_request = 0;
-static uint8_t power_module_policy_value = POWER_MODULE_POLICY_AVERAGE;
+static uint8_t power_module_policy_value = POWER_MODULE_POLICY_PRIORITY;
 
 void set_power_module_policy_request(power_module_policy_t policy)
 {
@@ -2413,537 +1930,11 @@ static void handle_power_module_type_config(channels_info_t *channels_info)
 	}
 }
 
-static int relay_check_start_sync(channels_info_t *channels_info)
-{
-	int ret = 0;
-	int i;
-
-	for(i = 0; i < channels_info->channel_number; i++) {
-		channel_info_t *channel_info = channels_info->channel_info + i;
-
-		if(channel_info->status.state != CHANNEL_STATE_RELAY_CHECK) {
-			ret = -1;
-			break;
-		}
-	}
-
-	return ret;
-}
-
-static int relay_check_prepare(channels_info_t *channels_info)
-{
-	int ret = 0;
-	int i;
-	channels_settings_t *channels_settings = &channels_info->channels_settings;
-	uint16_t voltage = channels_settings->module_min_output_voltage;
-	uint16_t current = channels_settings->module_min_output_current;
-	relay_boards_com_info_t *relay_boards_com_info = (relay_boards_com_info_t *)channels_info->relay_boards_com_info;
-
-	for(i = 0; i < channels_info->relay_board_item_number; i++) {
-		relay_board_item_info_t *relay_board_item_info = channels_info->relay_board_item_info + i;
-		relay_board_item_info->config = 0x00;
-		relay_boards_com_update_config(relay_boards_com_info, relay_board_item_info->board_id, relay_board_item_info->config);
-	}
-
-	for(i = 0; i < channels_info->power_module_group_number; i++) {
-		power_module_group_info_t *power_module_group_info = channels_info->power_module_group_info + i;
-		struct list_head *head = &power_module_group_info->power_module_item_list;
-		power_module_item_info_t *power_module_item_info;
-		list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
-			power_module_item_info->status.require_relay_check_voltage = voltage;
-			power_module_item_info->status.require_relay_check_current = current;
-			module_voltage_current_correction(channels_settings, &power_module_item_info->status.require_relay_check_voltage, &power_module_item_info->status.require_relay_check_current);
-			module_power_limit_correction(channels_settings, &power_module_item_info->status.require_relay_check_voltage, &power_module_item_info->status.require_relay_check_current);
-
-			if(power_module_item_info->status.require_relay_check_voltage == channels_settings->module_max_output_voltage) {
-				debug("module_id %d relay check voltage %d == module max voltage %d",
-				      power_module_item_info->module_id,
-				      power_module_item_info->status.require_relay_check_voltage,
-				      channels_settings->module_max_output_voltage);
-				ret = -1;
-				break;
-			}
-
-			debug("module_id %d voltage %d, current %d",
-			      power_module_item_info->module_id,
-			      power_module_item_info->status.require_relay_check_voltage,
-			      power_module_item_info->status.require_relay_check_current);
-
-			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_ACTIVE_RELAY_CHECK;
-
-		}
-
-		if(ret != 0) {
-			break;
-		}
-
-		voltage += 200;
-	}
-
-	return ret;
-}
-
-static int relay_check_confirm(channels_info_t *channels_info)
-{
-	int ret = 0;
-	int i;
-
-	for(i = 0; i < channels_info->relay_board_item_number; i++) {
-		relay_board_item_info_t *relay_board_item_info = channels_info->relay_board_item_info + i;
-
-		if(relay_board_item_info->config != relay_board_item_info->remote_config) {
-			debug("board_id %d config %02x, remote config %02x",
-			      relay_board_item_info->board_id,
-			      relay_board_item_info->config,
-			      relay_board_item_info->remote_config);
-			ret = -1;
-			break;
-		}
-	}
-
-	if(ret != 0) {
-		return ret;
-	}
-
-	for(i = 0; i < channels_info->power_module_group_number; i++) {
-		power_module_group_info_t *power_module_group_info = channels_info->power_module_group_info + i;
-		struct list_head *head = &power_module_group_info->power_module_item_list;
-		power_module_item_info_t *power_module_item_info;
-		list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
-			if(abs(power_module_item_info->status.require_relay_check_voltage - power_module_item_info->status.module_output_voltage) > 50) {
-				debug("module_id %d require_relay_check_voltage %d, module_output_voltage %d",
-				      power_module_item_info->module_id,
-				      power_module_item_info->status.require_relay_check_voltage,
-				      power_module_item_info->status.module_output_voltage);
-				ret = -1;
-				break;
-			}
-		}
-
-		if(ret != 0) {
-			break;
-		}
-	}
-
-	return ret;
-}
-
-static int relay_check_insulation_check(channels_info_t *channels_info)
-{
-	int ret = 0;
-	int i;
-
-	for(i = 0; i < channels_info->channel_number; i++) {
-		channel_info_t *channel_info = channels_info->channel_info + i;
-
-		if(channel_info->status.charge_output_voltage > 50) {
-			ret = -1;
-			break;
-		}
-	}
-
-	return ret;
-}
-
-static int relay_check_channel_module_group_id_check(channels_info_t *channels_info)
-{
-	int ret = -1;
-	relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-	uint8_t channel_id = relay_check_info->relay_check_channel_id;
-	uint8_t group_id = relay_check_info->relay_check_power_module_group_id;
-	channel_info_t *channel_info = channels_info->channel_info + channel_id;
-	power_module_group_info_t *power_module_group_info = channels_info->power_module_group_info + group_id;
-
-	if(channel_id >= channels_info->channel_number) {
-		debug("channel_id >= channels_info->channel_number");
-		return ret;
-	}
-
-	if(group_id >= channels_info->power_module_group_number) {
-		debug("group_id >= channels_info->power_module_group_number");
-		return ret;
-	}
-
-	if(channel_info->pdu_group_info == power_module_group_info->pdu_group_info) {
-		ret = 0;
-		debug("channel_id %d group_id %d start relay check", channel_id, group_id);
-	}
-
-	return ret;
-}
-
-static int relay_check_channel_module_id_next(channels_info_t *channels_info)
-{
-	int ret = -1;
-	relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-	uint8_t channel_id = relay_check_info->relay_check_channel_id;
-	uint8_t group_id = relay_check_info->relay_check_power_module_group_id;
-
-	if(channel_id >= channels_info->channel_number) {
-		debug("channel_id >= channels_info->channel_number");
-		return ret;
-	}
-
-	if(group_id >= channels_info->power_module_group_number) {
-		debug("group_id >= channels_info->power_module_group_number");
-		return ret;
-	}
-
-	group_id++;
-
-	if(group_id >= channels_info->power_module_group_number) {
-		group_id = 0;
-		channel_id++;
-
-		if(channel_id >= channels_info->channel_number) {
-		} else {
-			relay_check_info->relay_check_channel_id = channel_id;
-			relay_check_info->relay_check_power_module_group_id = group_id;
-			ret = 0;
-		}
-	} else {
-		relay_check_info->relay_check_power_module_group_id = group_id;
-		ret = 0;
-	}
-
-	return ret;
-}
-
-static int relay_check_channel_config(channels_info_t *channels_info)
-{
-	int ret = 0;
-	relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-	uint8_t channel_id = relay_check_info->relay_check_channel_id;
-	uint8_t group_id = relay_check_info->relay_check_power_module_group_id;
-	uint8_t board_id = 0xff;
-	uint8_t config = 0x00;
-	channel_info_t *channel_info = channels_info->channel_info + channel_id;
-	relay_board_item_info_t *relay_board_item_info;
-	struct list_head *head;
-	relay_boards_com_info_t *relay_boards_com_info = (relay_boards_com_info_t *)channels_info->relay_boards_com_info;
-
-	if(channel_id >= channels_info->channel_number) {
-		debug("channel_id >= channels_info->channel_number");
-		ret = -1;
-		return ret;
-	}
-
-	if(group_id >= channels_info->power_module_group_number) {
-		debug("group_id >= channels_info->power_module_group_number");
-		ret = -1;
-		return ret;
-	}
-
-	head = &channel_info->relay_board_item_list;
-	list_for_each_entry(relay_board_item_info, head, relay_board_item_info_t, list) {
-		if(group_id < relay_board_item_info->offset) {
-			continue;
-		}
-
-		if(group_id >= relay_board_item_info->offset + relay_board_item_info->number) {
-			continue;
-		}
-
-		board_id = relay_board_item_info->board_id;
-		config = set_u8_bits(0x00, group_id - relay_board_item_info->offset, 1);
-
-		relay_board_item_info->config = config;
-		relay_check_info->relay_check_board_id = board_id;
-
-		relay_boards_com_update_config(relay_boards_com_info, relay_board_item_info->board_id, relay_board_item_info->config);
-	}
-
-	if(board_id == 0xff) {
-		debug("config channel_id %d group_id %d error!", channel_id, group_id);
-		ret = -1;
-		return ret;
-	}
-
-	return ret;
-}
-
-static int relay_check_channel_check(channels_info_t *channels_info)
-{
-	int ret = 0;
-	relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-	uint8_t channel_id = relay_check_info->relay_check_channel_id;
-	uint8_t group_id = relay_check_info->relay_check_power_module_group_id;
-	uint8_t board_id = relay_check_info->relay_check_board_id;
-	power_module_group_info_t *power_module_group_info = channels_info->power_module_group_info + group_id;
-	relay_boards_com_info_t *relay_boards_com_info = (relay_boards_com_info_t *)channels_info->relay_boards_com_info;
-
-	int i;
-
-	if(channel_id >= channels_info->channel_number) {
-		debug("channel_id >= channels_info->channel_number");
-		ret = -1;
-		return ret;
-	}
-
-	if(group_id >= channels_info->power_module_group_number) {
-		debug("group_id >= channels_info->power_module_group_number");
-		ret = -1;
-		return ret;
-	}
-
-	if(board_id >= channels_info->relay_board_item_number) {
-		debug("board_id >= channels_info->relay_board_item_number");
-		ret = -1;
-		return ret;
-	}
-
-	for(i = 0; i < channels_info->channel_number; i++) {
-		channel_info_t *channel_info = channels_info->channel_info + i;
-
-		if(channel_id == channel_info->channel_id) {
-			struct list_head *head = &power_module_group_info->power_module_item_list;
-			power_module_item_info_t *power_module_item_info;
-			list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
-				if(abs(channel_info->status.charge_output_voltage - power_module_item_info->status.require_relay_check_voltage) > 50) {
-					debug("channel_id %d charge_output_voltage:%d, require_relay_check_voltage:%d",
-					      channel_info->channel_id,
-					      channel_info->status.charge_output_voltage,
-					      power_module_item_info->status.require_relay_check_voltage);
-					ret = -1;
-					break;
-				}
-			}
-
-			if(ret != 0) {
-				break;
-			}
-		} else {
-			if(channel_info->status.charge_output_voltage > 50) {
-				debug("channel_id %d charge_output_voltage:%d",
-				      channel_info->channel_id,
-				      channel_info->status.charge_output_voltage);
-				ret = -1;
-				break;
-			}
-		}
-	}
-
-	if(ret == 0) {
-		relay_board_item_info_t *relay_board_item_info = channels_info->relay_board_item_info + board_id;
-
-		relay_board_item_info->config = 0x00;
-		relay_boards_com_update_config(relay_boards_com_info, relay_board_item_info->board_id, relay_board_item_info->config);
-	}
-
-	return ret;
-}
-
-static int relay_check_stop(channels_info_t *channels_info)
-{
-	int ret = 0;
-	int i;
-	relay_boards_com_info_t *relay_boards_com_info = (relay_boards_com_info_t *)channels_info->relay_boards_com_info;
-
-	for(i = 0; i < channels_info->relay_board_item_number; i++) {
-		relay_board_item_info_t *relay_board_item_info = channels_info->relay_board_item_info + i;
-		relay_board_item_info->config = 0x00;
-		relay_boards_com_update_config(relay_boards_com_info, relay_board_item_info->board_id, relay_board_item_info->config);
-	}
-
-	for(i = 0; i < channels_info->power_module_group_number; i++) {
-		power_module_group_info_t *power_module_group_info = channels_info->power_module_group_info + i;
-		struct list_head *head = &power_module_group_info->power_module_item_list;
-		power_module_item_info_t *power_module_item_info;
-		list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
-			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
-		}
-	}
-
-	return ret;
-}
-
-#define RELAY_CHECK_STATE_TIMEOUT (30 * 1000)
-
-static int handle_channels_relay_check_state(channels_info_t *channels_info)
-{
-	int ret = -1;
-	uint32_t ticks = osKernelSysTick();
-
-	relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-
-	switch(relay_check_info->relay_check_state) {
-		case RELAY_CHECK_STATE_NONE: {
-		}
-		break;
-
-		case RELAY_CHECK_STATE_STOP: {
-		}
-		break;
-
-		default: {
-			if(relay_check_info->relay_check_request_state == RELAY_CHECK_REQUEST_STATE_STOP) {
-				relay_check_info->relay_check_request_state = RELAY_CHECK_REQUEST_STATE_NONE;
-
-				set_fault(relay_check_info->faults, RELAY_CHECK_FAULT_FAULT, 0);
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			}
-		}
-		break;
-	}
-
-	switch(relay_check_info->relay_check_state) {
-		case RELAY_CHECK_STATE_NONE: {
-			if(relay_check_info->relay_check_request_state == RELAY_CHECK_REQUEST_STATE_START) {
-				relay_check_info->relay_check_request_state = RELAY_CHECK_REQUEST_STATE_NONE;
-
-				set_fault(relay_check_info->faults, RELAY_CHECK_FAULT_FAULT, 0);
-				relay_check_info->stamp = ticks;
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_START_SYNC;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_START_SYNC: {
-			if(ticks_duration(ticks, relay_check_info->stamp) >= RELAY_CHECK_STATE_TIMEOUT) {
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_NONE;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			} else {
-				if(relay_check_start_sync(channels_info) == 0) {//等待所有通道都同步到自检状态
-					relay_check_info->relay_check_state = RELAY_CHECK_STATE_PREPARE;
-					debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-				}
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_PREPARE: {
-			if(relay_check_prepare(channels_info) == 0) {//配置所有开关板关断，所有模块组加梯度电压
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_PREPARE_CONFIRM;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			} else {
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_PREPARE_CONFIRM: {
-			if(relay_check_confirm(channels_info) == 0) {//确认开关板状态及梯度电压
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_INSULATION_CHECK;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_INSULATION_CHECK: {//加模块组梯度电压后，检测继电器断开时的开路电压是否为0
-			if(relay_check_insulation_check(channels_info) == 0) {
-				relay_check_info->stamp = ticks;
-				relay_check_info->relay_check_channel_id = 0;
-				relay_check_info->relay_check_power_module_group_id = 0;
-
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_CHANNEL_MODULE_ID_CHECK;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			} else {
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-				set_fault(relay_check_info->faults, RELAY_CHECK_FAULT_FAULT, 1);
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_CHANNEL_MODULE_ID_CHECK: {
-			int ret = relay_check_channel_module_group_id_check(channels_info);
-
-			if(ret == 0) {
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_CHANNEL_CONFIG;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			} else {
-				if(relay_check_channel_module_id_next(channels_info) != 0) {//检测完成
-					relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-					debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-				} else {
-					relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-
-					debug("try channel_id %d module_id %d",
-					      relay_check_info->relay_check_channel_id,
-					      relay_check_info->relay_check_power_module_group_id);
-				}
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_CHANNEL_CONFIG: {
-			if(relay_check_channel_config(channels_info) == 0) {
-				relay_check_info->stamp = ticks;
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_CHANNEL_CONFIG_SYNC;
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			} else {
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-				set_fault(relay_check_info->faults, RELAY_CHECK_FAULT_FAULT, 1);
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_CHANNEL_CONFIG_SYNC: {
-			if(ticks_duration(ticks, relay_check_info->stamp) >= RELAY_CHECK_STATE_TIMEOUT) {
-				relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-				set_fault(relay_check_info->faults, RELAY_CHECK_FAULT_FAULT, 1);
-				debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-			} else {
-				if(relay_check_confirm(channels_info) == 0) {//确认开关板状态及梯度电压
-					relay_check_info->stamp = ticks;
-					relay_check_info->relay_check_state = RELAY_CHECK_STATE_CHANNEL_CHECK;
-					debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-				}
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_CHANNEL_CHECK: {
-			if(relay_check_channel_check(channels_info) == 0) {//反馈电压检查
-				if(relay_check_channel_module_id_next(channels_info) == 0) {//检查下一路接线
-					relay_check_info_t *relay_check_info = &channels_info->relay_check_info;
-
-					debug("try channel_id %d module_id %d",
-					      relay_check_info->relay_check_channel_id,
-					      relay_check_info->relay_check_power_module_group_id);
-
-					relay_check_info->relay_check_state = RELAY_CHECK_STATE_CHANNEL_MODULE_ID_CHECK;
-					debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-				} else {//测试完毕
-					relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-					debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-				}
-			} else {//测试失败
-				if(ticks_duration(ticks, relay_check_info->stamp) >= RELAY_CHECK_STATE_TIMEOUT) {
-					relay_check_info->relay_check_state = RELAY_CHECK_STATE_STOP;
-					set_fault(relay_check_info->faults, RELAY_CHECK_FAULT_FAULT, 1);
-					debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-				}
-			}
-		}
-		break;
-
-		case RELAY_CHECK_STATE_STOP: {
-			relay_check_stop(channels_info);
-			relay_check_info->relay_check_state = RELAY_CHECK_STATE_NONE;
-			debug("channels relay check to state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-		}
-		break;
-
-		default: {
-			debug("channels relay check state %s", get_relay_check_state_des(relay_check_info->relay_check_state));
-		}
-		break;
-	}
-
-	return ret;
-}
-
 static void channels_debug(channels_info_t *channels_info)
 {
 	int i;
 	power_module_group_info_t *power_module_group_info;
 	power_module_item_info_t *power_module_item_info;
-	relay_board_item_info_t *relay_board_item_info;
 	channel_info_t *channel_info;
 	pdu_group_info_t *pdu_group_info;
 	struct list_head *head;
@@ -2963,16 +1954,6 @@ static void channels_debug(channels_info_t *channels_info)
 	for(i = 0; i < channels_info->power_module_group_number; i++) {
 		power_module_group_info = channels_info->power_module_group_info + i;
 		print_power_module_group_info(1, power_module_group_info);
-	}
-
-	_printf("\n");
-
-	_printf("all relay board items:\n");
-
-	for(i = 0; i < channels_info->relay_board_item_number; i++) {
-		relay_board_item_info = channels_info->relay_board_item_info + i;
-
-		print_relay_board_item_info(1, relay_board_item_info);
 	}
 
 	_printf("\n");
@@ -3011,11 +1992,6 @@ static void channels_debug(channels_info_t *channels_info)
 
 		print_channel_info(1, channel_info);
 
-		head = &channel_info->relay_board_item_list;
-		list_for_each_entry(relay_board_item_info, head, relay_board_item_info_t, list) {
-			print_relay_board_item_info(2, relay_board_item_info);
-		}
-
 		head = &channel_info->power_module_group_list;
 		list_for_each_entry(power_module_group_info, head, power_module_group_info_t, list) {
 			print_power_module_group_info(2, power_module_group_info);
@@ -3034,11 +2010,6 @@ static void channels_debug(channels_info_t *channels_info)
 		list_for_each_entry(channel_info, head, channel_info_t, list) {
 			print_channel_info(2, channel_info);
 
-			head1 = &channel_info->relay_board_item_list;
-			list_for_each_entry(relay_board_item_info, head1, relay_board_item_info_t, list) {
-				print_relay_board_item_info(3, relay_board_item_info);
-			}
-
 			head1 = &channel_info->power_module_group_list;
 			list_for_each_entry(power_module_group_info, head1, power_module_group_info_t, list) {
 				print_power_module_group_info(2, power_module_group_info);
@@ -3050,11 +2021,6 @@ static void channels_debug(channels_info_t *channels_info)
 		head = &pdu_group_info->channel_active_list;
 		list_for_each_entry(channel_info, head, channel_info_t, list) {
 			print_channel_info(2, channel_info);
-
-			head1 = &channel_info->relay_board_item_list;
-			list_for_each_entry(relay_board_item_info, head1, relay_board_item_info_t, list) {
-				print_relay_board_item_info(3, relay_board_item_info);
-			}
 
 			head1 = &channel_info->power_module_group_list;
 			list_for_each_entry(power_module_group_info, head1, power_module_group_info_t, list) {
@@ -3068,11 +2034,6 @@ static void channels_debug(channels_info_t *channels_info)
 		list_for_each_entry(channel_info, head, channel_info_t, list) {
 			print_channel_info(2, channel_info);
 
-			head1 = &channel_info->relay_board_item_list;
-			list_for_each_entry(relay_board_item_info, head1, relay_board_item_info_t, list) {
-				print_relay_board_item_info(3, relay_board_item_info);
-			}
-
 			head1 = &channel_info->power_module_group_list;
 			list_for_each_entry(power_module_group_info, head1, power_module_group_info_t, list) {
 				print_power_module_group_info(3, power_module_group_info);
@@ -3084,11 +2045,6 @@ static void channels_debug(channels_info_t *channels_info)
 		head = &pdu_group_info->channel_disable_list;
 		list_for_each_entry(channel_info, head, channel_info_t, list) {
 			print_channel_info(2, channel_info);
-
-			head1 = &channel_info->relay_board_item_list;
-			list_for_each_entry(relay_board_item_info, head1, relay_board_item_info_t, list) {
-				print_relay_board_item_info(3, relay_board_item_info);
-			}
 
 			head1 = &channel_info->power_module_group_list;
 			list_for_each_entry(power_module_group_info, head1, power_module_group_info_t, list) {
@@ -3138,27 +2094,6 @@ static void handle_channels_fault(channels_info_t *channels_info)
 	}
 
 	set_fault(channels_info->faults, CHANNELS_FAULT_POWER_MODULE, fault);
-
-	fault = 0;
-
-	for(i = 0; i < channels_info->relay_board_item_number; i++) {
-		relay_board_item_info_t *relay_board_item_info = channels_info->relay_board_item_info + i;
-
-		if(get_first_fault(relay_board_item_info->faults) != -1) {
-			fault = 1;
-			break;
-		}
-	}
-
-	set_fault(channels_info->faults, CHANNELS_FAULT_RELAY_BOARD, fault);
-
-	fault = 0;
-
-	if(get_first_fault(channels_info->relay_check_info.faults) != -1) {
-		fault = 1;
-	}
-
-	set_fault(channels_info->faults, CHANNELS_FAULT_RELAY_CHECK, fault);
 
 	fault = 0;
 
@@ -3244,13 +2179,9 @@ static void handle_common_periodic(void *fn_ctx, void *chain_ctx)
 
 	handle_fan_state(channels_info);
 
-	update_relay_boards_info_state(channels_info);
-
 	handle_power_module_policy_request(channels_info);
 
 	handle_power_module_type_config(channels_info);
-
-	handle_channels_relay_check_state(channels_info);
 
 	do_dump_channels_stats(channels_info);
 
@@ -3380,8 +2311,6 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	uint8_t power_module_group_offset = 0;
 	uint8_t power_module_item_offset = 0;
 	uint8_t channel_offset = 0;
-	uint8_t relay_board_item_offset = 0;
-	int relay_board_power_module_group_id_offset = 0;
 	channels_settings_t *channels_settings = &channels_info->channels_settings;
 	pdu_config_t *pdu_config = &channels_settings->pdu_config;
 	display_info_t *display_info;
@@ -3412,10 +2341,6 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	OS_ASSERT(channels_info->channel_number != 0);
 	debug("channels_info->channel_number:%d", channels_info->channel_number);
 
-	channels_info->relay_board_item_number = get_relay_board_item_number(pdu_config);
-	OS_ASSERT(channels_info->relay_board_item_number != 0);
-	debug("channels_info->relay_board_item_number:%d", channels_info->relay_board_item_number);
-
 	//分配pdu组信息
 	channels_info->pdu_group_info = (pdu_group_info_t *)os_calloc(channels_info->pdu_group_number, sizeof(pdu_group_info_t));
 	OS_ASSERT(channels_info->pdu_group_info != NULL);
@@ -3444,20 +2369,8 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 		OS_ASSERT(channel_info_item->faults != NULL);
 	}
 
-
-	//分配开关板信息
-	channels_info->relay_board_item_info = (relay_board_item_info_t *)os_calloc(channels_info->relay_board_item_number, sizeof(relay_board_item_info_t));
-	OS_ASSERT(channels_info->relay_board_item_info != NULL);
-
-	for(i = 0; i < channels_info->relay_board_item_number; i++) {
-		relay_board_item_info_t *relay_board_item_info_item = channels_info->relay_board_item_info + i;
-		relay_board_item_info_item->faults = alloc_bitmap(RELAY_BOARD_ITEM_FAULT_SIZE);
-		OS_ASSERT(relay_board_item_info_item->faults != NULL);
-	}
-
 	channels_config->power_module_config.channels_power_module_number = channels_info->power_module_item_number;
 	channels_config->channel_number = channels_info->channel_number;
-	channels_config->relay_board_number = channels_info->relay_board_item_number;
 
 	channels_info->power_modules_info = get_or_alloc_power_modules_info(channels_info->channels_config);
 	OS_ASSERT(channels_info->power_modules_info != NULL);
@@ -3466,17 +2379,12 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	channels_info->channels_com_info = get_or_alloc_channels_com_info(channels_info);
 	OS_ASSERT(channels_info->channels_com_info != NULL);
 
-	channels_info->relay_boards_com_info = get_or_alloc_relay_boards_com_info(channels_info);
-	OS_ASSERT(channels_info->relay_boards_com_info != NULL);
-
 	for(i = 0; i < pdu_config->pdu_group_number; i++) {
 		pdu_group_config_t *pdu_group_config = &pdu_config->pdu_group_config[i];
 		pdu_group_info_t *pdu_group_info_item = channels_info->pdu_group_info + i;
 		int j;
 
 		OS_ASSERT(pdu_group_config->channel_number != 0);
-		OS_ASSERT(pdu_group_config->relay_board_number_per_channel != 0);
-		OS_ASSERT(pdu_group_config->relay_board_number_per_channel <= RELAY_BROAD_NUMBER_PER_CHANNEL_MAX);
 
 		pdu_group_info_item->pdu_group_id = i;
 		pdu_group_info_item->channel_number = pdu_group_config->channel_number;
@@ -3490,37 +2398,37 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 		INIT_LIST_HEAD(&pdu_group_info_item->power_module_group_deactive_list);
 		INIT_LIST_HEAD(&pdu_group_info_item->power_module_group_disable_list);
 
+		pdu_group_info_item->relay_map = alloc_bitmap(pdu_group_config->channel_number);
+		OS_ASSERT(pdu_group_info_item->relay_map != NULL);
+
 		pdu_group_info_item->channels_change_state = CHANNELS_CHANGE_STATE_IDLE;
 		pdu_group_info_item->channels_info = channels_info;
 
-		for(j = 0; j < RELAY_BROAD_NUMBER_PER_CHANNEL_MAX; j++) {
+		for(j = 0; j < pdu_group_config->channel_number; j++) {
 			int k;
+			//一枪对应一个模块组
+			uint8_t group_id = power_module_group_offset++;
+			power_module_group_info_t *power_module_group_info_item = channels_info->power_module_group_info + group_id;
+			uint8_t power_module_number = pdu_group_config->power_module_number_per_power_module_group;
 
-			for(k = 0; k < pdu_group_config->power_module_group_number_per_relay_board[j]; k++) {
-				int l;
-				uint8_t group_id = power_module_group_offset++;
-				power_module_group_info_t *power_module_group_info_item = channels_info->power_module_group_info + group_id;
-				uint8_t power_module_number = pdu_group_config->power_module_number_per_power_module_group;
+			OS_ASSERT(power_module_number != 0);
+			OS_ASSERT(group_id < channels_info->power_module_group_number);
+			list_add_tail(&power_module_group_info_item->list, &pdu_group_info_item->power_module_group_idle_list);
+			power_module_group_info_item->group_id = group_id;
+			power_module_group_info_item->pdu_group_info = pdu_group_info_item;
+			INIT_LIST_HEAD(&power_module_group_info_item->power_module_item_list);
 
-				OS_ASSERT(power_module_number != 0);
-				OS_ASSERT(group_id < channels_info->power_module_group_number);
-				list_add_tail(&power_module_group_info_item->list, &pdu_group_info_item->power_module_group_idle_list);
-				power_module_group_info_item->group_id = group_id;
-				power_module_group_info_item->pdu_group_info = pdu_group_info_item;
-				INIT_LIST_HEAD(&power_module_group_info_item->power_module_item_list);
-
-				for(l = 0; l < power_module_number; l++) {
-					uint8_t module_id = power_module_item_offset++;
-					power_module_item_info_t *power_module_item_info = channels_info->power_module_item_info + module_id;
-					OS_ASSERT(module_id < channels_info->power_module_item_number);
-					list_add_tail(&power_module_item_info->list, &power_module_group_info_item->power_module_item_list);
-					power_module_item_info->module_id = module_id;
-					power_module_item_info->power_modules_info = channels_info->power_modules_info;
-					power_module_item_info->power_module_group_info = power_module_group_info_item;
-					power_module_item_info->query_stamp = ticks - (1 * 1000);
-					power_module_item_info->setting_stamp = ticks - (2 * 1000);
-					power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
-				}
+			for(k = 0; k < power_module_number; k++) {
+				uint8_t module_id = power_module_item_offset++;
+				power_module_item_info_t *power_module_item_info = channels_info->power_module_item_info + module_id;
+				OS_ASSERT(module_id < channels_info->power_module_item_number);
+				list_add_tail(&power_module_item_info->list, &power_module_group_info_item->power_module_item_list);
+				power_module_item_info->module_id = module_id;
+				power_module_item_info->power_modules_info = channels_info->power_modules_info;
+				power_module_item_info->power_module_group_info = power_module_group_info_item;
+				power_module_item_info->query_stamp = ticks - (1 * 1000);
+				power_module_item_info->setting_stamp = ticks - (2 * 1000);
+				power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
 			}
 		}
 
@@ -3528,9 +2436,7 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 		for(j = 0; j < pdu_group_info_item->channel_number; j++) {
 			uint8_t channel_id = channel_offset++;
 			channel_info_t *channel_info_item = channels_info->channel_info + channel_id;
-			int k;
 			//当前通道当前开关板电源模块组偏移
-			int relay_board_offset = relay_board_power_module_group_id_offset;
 
 			OS_ASSERT(channel_id < channels_info->channel_number);
 			list_add_tail(&channel_info_item->list, &pdu_group_info_item->channel_idle_list);
@@ -3539,38 +2445,14 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 			channel_info_item->pdu_group_info = pdu_group_info_item;
 			channel_info_item->status.state = CHANNEL_STATE_IDLE;
 			channel_info_item->channel_request_state = CHANNEL_REQUEST_STATE_NONE;
-			channel_info_item->relay_board_number = pdu_group_config->relay_board_number_per_channel;
-			INIT_LIST_HEAD(&channel_info_item->relay_board_item_list);
-
-			//初始化当前通道对应的开关板信息
-			for(k = 0; k < channel_info_item->relay_board_number; k++) {
-				//当前通道当前开关板连接的模块组数
-				uint8_t relay_board_power_module_group_number = pdu_group_config->power_module_group_number_per_relay_board[k];
-				//计算当前通道当前开关板的id
-				uint8_t board_id = relay_board_item_offset++;
-				//当前通道当前开关板
-				relay_board_item_info_t *relay_board_item_info_item = channels_info->relay_board_item_info + board_id;
-
-				OS_ASSERT(board_id < channels_info->relay_board_item_number);
-				list_add_tail(&relay_board_item_info_item->list, &channel_info_item->relay_board_item_list);
-				relay_board_item_info_item->board_id = board_id;
-				relay_board_item_info_item->channel_id = channel_id;
-				relay_board_item_info_item->relay_boards_com_info = channels_info->relay_boards_com_info;
-				relay_board_item_info_item->offset = relay_board_offset;
-				relay_board_item_info_item->number = relay_board_power_module_group_number;//模块组数
-				relay_board_offset += relay_board_power_module_group_number;
-			}
 
 			INIT_LIST_HEAD(&channel_info_item->power_module_group_list);
 		}
-
-		relay_board_power_module_group_id_offset += power_module_group_offset;
 	}
 
 	OS_ASSERT(channel_offset == channels_info->channel_number);
 	OS_ASSERT(power_module_group_offset == channels_info->power_module_group_number);
 	OS_ASSERT(power_module_item_offset == channels_info->power_module_item_number);
-	OS_ASSERT(relay_board_item_offset == channels_info->relay_board_item_number);
 
 	for(i = 0; i < channels_info->channel_number; i++) {
 		channel_info_t *channel_info = channels_info->channel_info + i;
@@ -3641,15 +2523,11 @@ static channels_info_t *alloc_channels_info(channels_config_t *channels_config)
 	channels_info->faults = alloc_bitmap(CHANNELS_FAULT_SIZE);
 	OS_ASSERT(channels_info->faults != NULL);
 
-	channels_info->relay_check_info.faults = alloc_bitmap(RELAY_CHECK_FAULT_SIZE);
-	OS_ASSERT(channels_info->relay_check_info.faults != NULL);
-
 	channels_info->common_periodic_chain = alloc_callback_chain();
 	OS_ASSERT(channels_info->common_periodic_chain != NULL);
 
 	channels_info->common_event_chain = alloc_callback_chain();
 	OS_ASSERT(channels_info->common_event_chain != NULL);
-
 
 	OS_ASSERT(channels_set_channels_config(channels_info, channels_config) == 0);
 

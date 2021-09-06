@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年08月26日 星期四 16时35分05秒
+ *   修改日期：2021年09月06日 星期一 15时18分57秒
  *   描    述：
  *
  *================================================================*/
@@ -60,6 +60,8 @@ typedef struct {
 	struct list_head power_module_group_disable_list;//电源模块组禁用列表
 
 	channels_change_state_t channels_change_state;//通道切换状态
+
+	bitmap_t *relay_map;//链式搭接开关状态位
 
 	void *channels_info;
 } pdu_group_info_t;//pdu分组信息
@@ -137,32 +139,6 @@ typedef struct {
 } channel_callback_t;
 
 typedef enum {
-	RELAY_BOARD_ITEM_FAULT_FAULT = 0,
-	RELAY_BOARD_ITEM_FAULT_CONNECT_TIMEOUT,
-	RELAY_BOARD_ITEM_FAULT_OVER_TEMPERATURE,
-	RELAY_BOARD_ITEM_FAULT_SIZE,
-} relay_board_item_fault_t;
-
-typedef struct {
-	struct list_head list;//关联的开关板列表
-	int8_t board_id;
-	uint8_t channel_id;
-	void *relay_boards_com_info;
-	uint8_t offset;
-	uint8_t number;
-	uint8_t config;
-
-	uint8_t remote_config;
-	int16_t temperature1;
-	int16_t temperature2;
-
-	uint16_t connect_state;
-	uint32_t update_stamp;
-
-	bitmap_t *faults;//relay_board_item_fault_t
-} relay_board_item_info_t;
-
-typedef enum {
 	CHANNEL_FAULT_FAULT = 0,
 	CHANNEL_FAULT_CONNECT_TIMEOUT,
 	CHANNEL_FAULT_SIZE,
@@ -178,8 +154,6 @@ typedef struct {
 	callback_item_t common_event_callback_item;
 	callback_item_t common_periodic_callback_item;
 	uint32_t channel_state_change_stamp;
-	uint8_t relay_board_number;
-	struct list_head relay_board_item_list;//关联的开关板列表
 	struct list_head power_module_group_list;//关联的电源模块组
 	bitmap_t *faults;//channel_fault_t
 } channel_info_t;
@@ -207,10 +181,6 @@ typedef struct {
 	uint16_t setting_output_current;//电源模块需求电流0.1a
 
 	uint16_t smooth_setting_output_current;//平滑电源模块需求电流0.1a
-
-	//自检输出电压
-	uint16_t require_relay_check_voltage;//电源模块需求电压0.1v
-	uint16_t require_relay_check_current;//电源模块需求电流0.1a
 
 	//模块输出
 	uint16_t module_output_voltage;//电源模块输出电压0.1v
@@ -249,8 +219,7 @@ typedef struct {
 	int group_id;
 	pdu_group_info_t *pdu_group_info;//pdu分组信息
 	void *channel_info;
-	void *relay_board_item_info;
-	struct list_head power_module_item_list;//电源模块空闲列表
+	struct list_head power_module_item_list;//电源模块列表
 } power_module_group_info_t;
 
 #pragma pack(push, 1)
@@ -269,40 +238,6 @@ typedef struct {
 } channels_settings_t;
 
 #pragma pack(pop)
-
-typedef enum {
-	RELAY_CHECK_REQUEST_STATE_NONE = 0,
-	RELAY_CHECK_REQUEST_STATE_START,
-	RELAY_CHECK_REQUEST_STATE_STOP,
-} relay_check_request_state_t;
-
-typedef enum {
-	RELAY_CHECK_STATE_NONE = 0,
-	RELAY_CHECK_STATE_START_SYNC,
-	RELAY_CHECK_STATE_PREPARE,
-	RELAY_CHECK_STATE_PREPARE_CONFIRM,
-	RELAY_CHECK_STATE_INSULATION_CHECK,
-	RELAY_CHECK_STATE_CHANNEL_MODULE_ID_CHECK,
-	RELAY_CHECK_STATE_CHANNEL_CONFIG,
-	RELAY_CHECK_STATE_CHANNEL_CONFIG_SYNC,
-	RELAY_CHECK_STATE_CHANNEL_CHECK,
-	RELAY_CHECK_STATE_STOP,
-} relay_check_state_t;
-
-typedef enum {
-	RELAY_CHECK_FAULT_FAULT = 0,
-	RELAY_CHECK_FAULT_SIZE,
-} relay_check_fault_t;
-
-typedef struct {
-	uint32_t stamp;
-	relay_check_request_state_t relay_check_request_state;
-	relay_check_state_t relay_check_state;
-	uint8_t relay_check_channel_id;
-	uint8_t relay_check_power_module_group_id;
-	uint8_t relay_check_board_id;
-	bitmap_t *faults;//relay_check_fault_t
-} relay_check_info_t;
 
 typedef enum {
 	CHANNELS_FAULT_CHANNEL = 0,
@@ -345,20 +280,14 @@ typedef struct {
 	uint8_t power_module_item_number;//所有模块数
 	power_module_item_info_t *power_module_item_info;//模块信息
 
-	uint8_t relay_board_item_number;//所有开关板数
-	relay_board_item_info_t *relay_board_item_info;//开关板信息
-
 	uint8_t pdu_group_number;//pdu组数
 	pdu_group_info_t *pdu_group_info;//pdu分组信息
 
 	void *power_modules_info;
 	void *channels_com_info;
-	void *relay_boards_com_info;
 	void *display_info;
 
 	uint8_t configed;
-
-	relay_check_info_t relay_check_info;
 
 	bitmap_t *faults;//channels_fault_t
 } channels_info_t;
@@ -372,7 +301,6 @@ int set_fault(bitmap_t *faults, int fault, uint8_t v);
 int get_fault(bitmap_t *faults, int fault);
 int get_first_fault(bitmap_t *faults);
 void free_channels_info(channels_info_t *channels_info);
-char *get_relay_check_state_des(relay_check_state_t state);
 char *get_power_module_item_state_des(power_module_item_state_t state);
 void set_power_module_policy_request(power_module_policy_t policy);
 void start_dump_channels_stats(void);

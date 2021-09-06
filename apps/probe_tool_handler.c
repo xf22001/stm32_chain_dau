@@ -73,30 +73,17 @@ static void fn3(request_t *request)
 	uint32_t total_size = request->header.total_size;
 	uint32_t stage = request->payload.stage;
 	uint8_t *data = (uint8_t *)(request + 1);
-	uint8_t is_app = 0;
-	uint8_t start_app = 0;
-
-#if defined(USER_APP)
-	is_app = 1;
-#endif
-
-	if(is_app == 1) {
-		uint8_t flag = 0x00;
-		flash_write(APP_CONFIG_ADDRESS, &flag, 1);
-		_printf("in app, reset for upgrade!\n");
-		HAL_NVIC_SystemReset();
-		return;
-	}
+	uint8_t start_upgrade_app = 0;
 
 	if(stage == 0) {
-		flash_erase_sector(FLASH_SECTOR_6, 2);//擦除第6和7扇区
+		flash_erase_sector(IAP_CONST_FW_ADDRESS_START_SECTOR, IAP_CONST_FW_ADDRESS_SECTOR_NUMBER);
 	} else if(stage == 1) {
 		if(data_size == 4) {
 			uint32_t *p = (uint32_t *)data;
 			file_crc32 = *p;
 		}
 	} else if(stage == 2) {
-		flash_write(USER_FLASH_FIRST_PAGE_ADDRESS + data_offset, data, data_size);
+		flash_write(IAP_CONST_FW_ADDRESS + data_offset, data, data_size);
 
 		if(data_offset + data_size == total_size) {
 			uint32_t read_offset = 0;
@@ -106,7 +93,7 @@ static void fn3(request_t *request)
 				uint32_t i;
 				uint32_t left = total_size - read_offset;
 				uint32_t read_size = (left > 32) ? 32 : left;
-				uint8_t *read_buffer = (uint8_t *)(USER_FLASH_FIRST_PAGE_ADDRESS + read_offset);
+				uint8_t *read_buffer = (uint8_t *)(IAP_CONST_FW_ADDRESS + read_offset);
 
 				for(i = 0; i < read_size; i++) {
 					crc32 += read_buffer[i];
@@ -118,18 +105,24 @@ static void fn3(request_t *request)
 			_printf("crc32:%x, file_crc32:%x\n", crc32, file_crc32);
 
 			if(crc32 == file_crc32) {
-				start_app = 1;
+				start_upgrade_app = 1;
 			}
 		}
 	}
 
 	loopback(request);
 
-	if(start_app) {
-		uint8_t flag = 0x01;
+	if(start_upgrade_app != 0) {
+		_printf("start upgrade app!\n");
 
-		_printf("start app!\n");
-		flash_write(APP_CONFIG_ADDRESS, &flag, 1);
+		if(set_firmware_size(total_size) != 0) {
+			debug("");
+		}
+
+		if(set_firmware_valid(1) != 0) {
+			debug("");
+		}
+
 		HAL_NVIC_SystemReset();
 	}
 }
@@ -221,7 +214,6 @@ static void fn5(request_t *request)
 {
 	int size = xPortGetFreeHeapSize();
 	uint8_t *os_thread_info;
-	uint8_t is_app = 0;
 	uint32_t ticks = osKernelSysTick();
 	uint16_t cpu_usage = osGetCPUUsage();
 	size_t total_heap_size = get_total_heap_size();
@@ -229,9 +221,6 @@ static void fn5(request_t *request)
 	size_t heap_count;
 	size_t heap_max_size;
 
-#if defined(USER_APP)
-	is_app = 1;
-#endif
 	get_mem_info(&heap_size, &heap_count,  &heap_max_size);
 
 	_printf("cpu usage:%d\n", cpu_usage);
@@ -268,7 +257,7 @@ static void fn5(request_t *request)
 
 	os_free(os_thread_info);
 
-	if(is_app) {
+	if(is_app() == 1) {
 		_printf("in app!\n");
 	} else {
 		_printf("in bootloader!\n");

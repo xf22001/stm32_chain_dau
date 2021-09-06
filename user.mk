@@ -6,7 +6,7 @@
 #   文件名称：user.mk
 #   创 建 者：肖飞
 #   创建日期：2019年10月25日 星期五 13时04分38秒
-#   修改日期：2021年08月23日 星期一 17时19分25秒
+#   修改日期：2021年09月06日 星期一 11时28分05秒
 #   描    述：
 #
 #================================================================
@@ -52,10 +52,8 @@ USER_C_SOURCES += apps/wiznet_spi.c
 USER_C_SOURCES += apps/storage_config.c
 ifeq ("$(origin TEST)", "command line")
 USER_C_SOURCES += apps/channels_communication_pseudo.c
-USER_C_SOURCES += apps/relay_boards_communication_pseudo.c
 else
 USER_C_SOURCES += apps/channels_communication.c
-USER_C_SOURCES += apps/relay_boards_communication.c
 endif
 USER_C_SOURCES += apps/modbus_addr_handler.c
 USER_C_SOURCES += apps/display_cache.c
