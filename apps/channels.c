@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月06日 星期一 17时28分10秒
+ *   修改日期：2021年09月07日 星期二 13时22分12秒
  *   描    述：
  *
  *================================================================*/
@@ -773,7 +773,8 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 	pdu_group_config->channel_number = 5;
 	pdu_group_config->power_module_number_per_power_module_group = 3;
 
-	channels_settings->power_module_type = POWER_MODULE_TYPE_WINLINE;
+	//channels_settings->power_module_type = POWER_MODULE_TYPE_WINLINE;
+	channels_settings->power_module_type = POWER_MODULE_TYPE_PSEUDO;
 	channels_settings->module_max_output_voltage = 10000;
 	channels_settings->module_min_output_voltage = 2000;
 	channels_settings->module_max_output_current = 10000;
@@ -789,6 +790,8 @@ static void init_channels_settings(channels_info_t *channels_info)
 
 	ret = channels_info_load_config(channels_info);
 
+	ret = -1;
+
 	if(ret != 0) {
 		debug("load config failed! restore config...");
 		restore_channels_settings(channels_settings);
@@ -798,6 +801,64 @@ static void init_channels_settings(channels_info_t *channels_info)
 	}
 
 	load_channels_display_cache(channels_info);
+}
+
+static relay_node_info_t *get_relay_node_info(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id_a, uint8_t channel_id_b)
+{
+	relay_node_info_t *relay_node_info = NULL;
+	relay_info_t *relay_info = &channels_config->relay_info;
+	pdu_group_relay_info_t *pdu_group_relay_info = NULL;
+	int i;
+
+	OS_ASSERT(channel_id_a != channel_id_b);
+
+	for(i = 0; i < relay_info->pdu_group_size; i++) {
+		pdu_group_relay_info_t *pdu_group_relay_info_item = relay_info->pdu_group_relay_info[i];
+
+		if(pdu_group_relay_info_item->pdu_group_id == pdu_group_id) {
+			pdu_group_relay_info = pdu_group_relay_info_item;
+			break;
+		}
+	}
+
+	if(pdu_group_relay_info == NULL) {
+		return relay_node_info;
+	}
+
+	for(i = 0; i < pdu_group_relay_info->relay_node_info_size; i++) {
+		relay_node_info_t *relay_node_info_item = pdu_group_relay_info->relay_node_info[i];
+		int j;
+		uint8_t found = 1;
+
+		for(j = 0; j < 2; j++) {
+			if(channel_id_a == relay_node_info_item->channel_id[i]) {
+				break;
+			}
+		}
+
+		if(j == 2) {
+			found = 0;
+			break;
+		}
+
+		for(j = 0; j < 2; j++) {
+			if(channel_id_b == relay_node_info_item->channel_id[i]) {
+				break;
+			}
+		}
+
+		if(j == 2) {
+			found = 0;
+			break;
+		}
+
+		if(found != 0) {
+			relay_node_info = relay_node_info_item;
+			break;
+		}
+	}
+
+	return relay_node_info;
 }
 
 static void channel_info_deactive_power_module_group(channel_info_t *channel_info)
@@ -839,6 +900,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 	struct list_head *head;
 	pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
 	channels_info_t *channels_info = (channels_info_t *)channel_info->channels_info;
+	channels_config_t *channels_config = channels_info->channels_config;
 	struct list_head list_unneeded_power_module_group = LIST_HEAD_INIT(list_unneeded_power_module_group);
 	channel_info_t *channel_info_item;
 	channel_info_t *channel_info_item_prev;
@@ -858,6 +920,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 		uint8_t next_channel_id;
 		uint8_t next_power_module_group_id;
 		power_module_group_info_t *power_module_group_info_item;
+		relay_node_info_t *relay_node_info;
 
 		if(channel_info_item->channel_id == 0) {
 			next_channel_id = channels_info->channel_number - 1;
@@ -887,7 +950,13 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 
 		//set relay channel_info_item_prev---channel_info_item, by id
 		//todo
-		
+		relay_node_info = get_relay_node_info(channels_config,
+		                                      pdu_group_info->pdu_group_id,
+		                                      channel_info_item_prev->channel_id,
+		                                      channel_info_item->channel_id);
+		OS_ASSERT(relay_node_info != NULL);
+		set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
+
 		channel_info_item_prev = channel_info_item;
 	}
 
@@ -899,6 +968,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 		uint8_t next_channel_id;
 		uint8_t next_power_module_group_id;
 		power_module_group_info_t *power_module_group_info_item;
+		relay_node_info_t *relay_node_info;
 
 		if(channel_info_item->channel_id == (channels_info->channel_number - 1)) {
 			next_channel_id = 0;
@@ -928,12 +998,19 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 
 		//set relay channel_info_item_prev---channel_info_item, by id
 		//todo
-		
+		relay_node_info = get_relay_node_info(channels_config,
+		                                      pdu_group_info->pdu_group_id,
+		                                      channel_info_item_prev->channel_id,
+		                                      channel_info_item->channel_id);
+		OS_ASSERT(relay_node_info != NULL);
+		set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
+
 		channel_info_item_prev = channel_info_item;
 	}
 
 	head = &list_unneeded_power_module_group;
 
+	//清理需要关闭的模块
 	list_for_each_safe(pos, n, head) {
 		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
 		power_module_item_info_t *power_module_item_info;
@@ -955,31 +1032,6 @@ static void free_power_module_group_for_active_channel_priority(pdu_group_info_t
 	list_for_each_entry(channel_info, head, channel_info_t, list) {
 		channel_info_deactive_unneeded_power_module_group_priority(channel_info);
 	}
-}
-
-static uint8_t get_available_power_group_count(pdu_group_info_t *pdu_group_info)
-{
-	uint8_t count = 0;
-
-	//计算空闲的模块组数
-	count += list_size(&pdu_group_info->power_module_group_idle_list);
-
-	//计算将要被回收的模块组数
-	count += list_size(&pdu_group_info->power_module_group_deactive_list);
-
-	return count;
-}
-
-static void cancel_last_start_channel(pdu_group_info_t *pdu_group_info)
-{
-	channel_info_t *channel_info;
-	struct list_head *head;
-
-	head = &pdu_group_info->channel_active_list;
-
-	channel_info = list_last_entry(head, channel_info_t, list);
-
-	list_move_tail(&channel_info->list, &pdu_group_info->channel_idle_list);
 }
 
 static void clean_up_relay_map(pdu_group_info_t *pdu_group_info)
@@ -1008,153 +1060,168 @@ static int pdu_group_info_free_power_module_group_priority(pdu_group_info_t *pdu
 	return ret;
 }
 
-static void channel_info_assign_power_module_group(channel_info_t *channel_info, uint8_t count)
+static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 {
 	pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
-	struct list_head *pos;
-	struct list_head *n;
+	channels_info_t *channels_info = (channels_info_t *)channel_info->channels_info;
+	channels_config_t *channels_config = channels_info->channels_config;
 	struct list_head *head;
-	struct list_head *head1;
-	uint32_t ticks = osKernelSysTick();
+	channel_info_t *channel_info_item;
+	channel_info_t *channel_info_item_prev;
 
-	if(count == 0) {
-		return;
-	}
+	//left search
+	channel_info_item_prev = channel_info;
+	channel_info_item = channel_info;
 
-	head = &pdu_group_info->power_module_group_idle_list;
+	while(channel_info_item != NULL) {
+		uint8_t next_channel_id;
+		uint8_t next_power_module_group_id;
+		power_module_group_info_t *power_module_group_info_item;
+		uint8_t find_power_module_group = 0;
+		relay_node_info_t *relay_node_info;
 
-	list_for_each_safe(pos, n, head) {
-		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
-		power_module_item_info_t *power_module_item_info;
-
-		head1 = &power_module_group_info->power_module_item_list;
-		list_for_each_entry(power_module_item_info, head1, power_module_item_info_t, list) {
-			if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
-				debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
-			}
-
-			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
-			power_module_item_info->test_stamp = ticks;
+		if(channel_info_item->channel_id == 0) {
+			next_channel_id = channels_info->channel_number - 1;
+		} else {
+			next_channel_id = channel_info_item->channel_id - 1;
 		}
-		power_module_group_info->channel_info = channel_info;
-		list_move_tail(&power_module_group_info->list, &channel_info->power_module_group_list);
-		debug("assign module group_id %d to channel_id %d", power_module_group_info->group_id, channel_info->channel_id);
 
-		count--;
+		channel_info_item = channels_info->channel_info + next_channel_id;
 
-		if(count == 0) {
+		if(channel_info_item->pdu_group_info->pdu_group_id != pdu_group_info->pdu_group_id) {
+			continue;
+		}
+
+		if(list_contain(&channel_info_item->list, &pdu_group_info->channel_active_list) == 0) {
 			break;
 		}
+
+		next_power_module_group_id = next_channel_id;
+		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
+
+		//当前模块组已存在于该枪
+		if(list_contain(&power_module_group_info_item->list, &channel_info->power_module_group_list) == 0) {
+			find_power_module_group = 1;
+		}
+
+		//当前模块组在空闲列表
+		if(list_contain(&power_module_group_info_item->list, &pdu_group_info->power_module_group_idle_list) == 0) {
+			power_module_item_info_t *power_module_item_info;
+			find_power_module_group = 1;
+			//set relay channel_info_item_prev---channel_info_item, by id
+			//todo
+			relay_node_info = get_relay_node_info(channels_config,
+			                                      pdu_group_info->pdu_group_id,
+			                                      channel_info_item_prev->channel_id,
+			                                      channel_info_item->channel_id);
+			OS_ASSERT(relay_node_info != NULL);
+			set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
+
+			head = &power_module_group_info_item->power_module_item_list;
+			list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
+				if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
+					debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
+				}
+
+				power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
+			}
+			power_module_group_info_item->channel_info = channel_info;
+			list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+			debug("assign module group_id %d to channel_id %d", power_module_group_info_item->group_id, channel_info->channel_id);
+		}
+
+		if(find_power_module_group == 0) {
+			break;
+		}
+
+		channel_info_item_prev = channel_info_item;
 	}
 
-	if(count != 0) {
-		debug("bug!!!");
+	//right search
+	channel_info_item_prev = channel_info;
+	channel_info_item = channel_info;
+
+	while(channel_info_item != NULL) {
+		uint8_t next_channel_id;
+		uint8_t next_power_module_group_id;
+		power_module_group_info_t *power_module_group_info_item;
+		uint8_t find_power_module_group = 0;
+		relay_node_info_t *relay_node_info;
+
+		if(channel_info_item->channel_id == (channels_info->channel_number - 1)) {
+			next_channel_id = 0;
+		} else {
+			next_channel_id = channel_info_item->channel_id + 1;
+		}
+
+		channel_info_item = channels_info->channel_info + next_channel_id;
+
+		if(channel_info_item->pdu_group_info->pdu_group_id != pdu_group_info->pdu_group_id) {
+			continue;
+		}
+
+		if(list_contain(&channel_info_item->list, &pdu_group_info->channel_active_list) == 0) {
+			break;
+		}
+
+		next_power_module_group_id = next_channel_id;
+		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
+
+		//当前模块组已存在于该枪
+		if(list_contain(&power_module_group_info_item->list, &channel_info->power_module_group_list) == 0) {
+			find_power_module_group = 1;
+		}
+
+		//当前模块组在空闲列表
+		if(list_contain(&power_module_group_info_item->list, &pdu_group_info->power_module_group_idle_list) == 0) {
+			power_module_item_info_t *power_module_item_info;
+			find_power_module_group = 1;
+			//set relay channel_info_item_prev---channel_info_item, by id
+			//todo
+			relay_node_info = get_relay_node_info(channels_config,
+			                                      pdu_group_info->pdu_group_id,
+			                                      channel_info_item_prev->channel_id,
+			                                      channel_info_item->channel_id);
+			OS_ASSERT(relay_node_info != NULL);
+			set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
+
+			head = &power_module_group_info_item->power_module_item_list;
+			list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
+				if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
+					debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
+				}
+
+				power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
+			}
+			power_module_group_info_item->channel_info = channel_info;
+			list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+			debug("assign module group_id %d to channel_id %d", power_module_group_info_item->group_id, channel_info->channel_id);
+		}
+
+		if(find_power_module_group == 0) {
+			break;
+		}
+
+		channel_info_item_prev = channel_info_item;
 	}
 }
 
-static void active_pdu_group_info_power_module_group_assign_priority(pdu_group_info_t *pdu_group_info, uint8_t available_count)
+static void active_pdu_group_info_power_module_group_assign_priority(pdu_group_info_t *pdu_group_info)
 {
 	channel_info_t *channel_info;
 	struct list_head *head;
-	uint8_t unsatisfied = 0;
 
 	head = &pdu_group_info->channel_active_list;
 
-	debug("available_count:%d", available_count);
-	//先保证至少有一个模块组可用
 	list_for_each_entry(channel_info, head, channel_info_t, list) {
-		uint8_t power_module_group_count = list_size(&channel_info->power_module_group_list);
-
-		if(power_module_group_count >= 1) {//至少有一个模块组可用,本轮不分配
-			continue;
-		}
-
-		if(available_count == 0) {
-			unsatisfied++;
-			continue;
-		}
-
-		channel_info_assign_power_module_group(channel_info, 1);
-		available_count -= 1;
+		channel_info_assign_power_module_group(channel_info);
 	}
-
-	if(available_count == 0) {
-		int i;
-
-		for(i = 0; i < unsatisfied; i++) {
-			cancel_last_start_channel(pdu_group_info);
-		}
-
-		return;
-	}
-
-	debug("available_count:%d", available_count);
-	//还有剩余模块组,按先后分配给有需求的通道
-	list_for_each_entry(channel_info, head, channel_info_t, list) {
-		uint8_t power_module_group_count = list_size(&channel_info->power_module_group_list);
-
-		debug("channel_id %d reassign_module_group_number:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number);
-
-		if(power_module_group_count >= channel_info->status.reassign_module_group_number) {//模块组足够
-			continue;
-		}
-
-		power_module_group_count = channel_info->status.reassign_module_group_number - power_module_group_count;
-
-		if(power_module_group_count > available_count) {
-			power_module_group_count = available_count;
-		}
-
-		channel_info_assign_power_module_group(channel_info, power_module_group_count);
-		available_count -= power_module_group_count;
-
-		if(available_count == 0) {
-			break;
-		}
-	}
-
-	if(available_count == 0) {
-		return;
-	}
-
-	debug("available_count:%d", available_count);
-
-	//还有剩余模块组,平均一下,按先后分配给各个通道
-	//if(available_count / list_size(&pdu_group_info->channel_active_list) != 0) {
-	//	uint8_t power_module_group_count = available_count / list_size(&pdu_group_info->channel_active_list);
-
-	//	list_for_each_entry(channel_info, head, channel_info_t, list) {
-	//		channel_info_assign_power_module_group(channel_info, power_module_group_count);
-	//		available_count -= power_module_group_count;
-
-	//		if(available_count == 0) {
-	//			break;
-	//		}
-	//	}
-	//}
-
-	//if(available_count == 0) {
-	//	return;
-	//}
-
-	//debug("available_count:%d", available_count);
-	//不够平均,按先后分配各通道一个,分完为止
-	//list_for_each_entry(channel_info, head, channel_info_t, list) {
-	//	channel_info_assign_power_module_group(channel_info, 1);
-	//	available_count -= 1;
-
-	//	if(available_count == 0) {
-	//		break;
-	//	}
-	//}
 }
 
 static void pdu_group_info_assign_power_module_group_priority(pdu_group_info_t *pdu_group_info)
 {
 	//充电中的枪数
 	uint8_t active_channel_count;
-	//可用的模块组数
-	uint8_t available_power_module_group_count;
 
 	//获取需要充电的枪数
 	active_channel_count = list_size(&pdu_group_info->channel_active_list);
@@ -1164,11 +1231,7 @@ static void pdu_group_info_assign_power_module_group_priority(pdu_group_info_t *
 		return;
 	}
 
-	//计算剩余模块组数
-	available_power_module_group_count = get_available_power_group_count(pdu_group_info);
-	debug("available_power_module_group_count:%d", available_power_module_group_count);
-
-	active_pdu_group_info_power_module_group_assign_priority(pdu_group_info, available_power_module_group_count);
+	active_pdu_group_info_power_module_group_assign_priority(pdu_group_info);
 }
 
 static int pdu_group_info_power_module_group_ready_sync(pdu_group_info_t *pdu_group_info)
@@ -1688,7 +1751,7 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 		break;
 
 		case POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE: {//准备启动模块组，根据情况预充
-			uint32_t ticks = osKernelSysTick();
+			//uint32_t ticks = osKernelSysTick();
 			power_module_group_info_t *power_module_group_info = (power_module_group_info_t *)power_module_item_info->power_module_group_info;
 			channel_info_t *channel_info = (channel_info_t *)power_module_group_info->channel_info;
 
@@ -1708,12 +1771,12 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 				//      power_module_item_info->status.setting_output_current);
 
 				if(abs(power_module_item_info->status.setting_output_voltage - power_module_item_info->status.module_output_voltage) <= 200) {
-					if(ticks_duration(ticks, power_module_item_info->test_stamp) >= (power_module_item_info->module_id * 1000 / 4)) {
-						power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_READY;
-						debug("module_id %d to state %s",
-						      power_module_item_info->module_id,
-						      get_power_module_item_state_des(power_module_item_info->status.state));
-					}
+					//if(ticks_duration(ticks, power_module_item_info->test_stamp) >= (power_module_item_info->module_id * 1000 / 4)) {
+					power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_READY;
+					debug("module_id %d to state %s",
+					      power_module_item_info->module_id,
+					      get_power_module_item_state_des(power_module_item_info->status.state));
+					//}
 				} else {
 					//debug("module_id %d setting_output_voltage:%d, module_output_voltage:%d",
 					//      power_module_item_info->module_id,

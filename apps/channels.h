@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年09月06日 星期一 15时18分57秒
+ *   修改日期：2021年09月07日 星期二 09时31分29秒
  *   描    述：
  *
  *================================================================*/
@@ -208,7 +208,7 @@ typedef struct {
 	uint32_t query_stamp;//1000
 	uint32_t setting_stamp;//2000
 
-	uint32_t test_stamp;//xiaofei
+	//uint32_t test_stamp;//xiaofei
 
 	power_module_item_status_t status;
 	bitmap_t *faults;//power_module_item_fault_t
