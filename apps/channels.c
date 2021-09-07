@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月07日 星期二 13时22分12秒
+ *   修改日期：2021年09月07日 星期二 16时13分49秒
  *   描    述：
  *
  *================================================================*/
@@ -779,7 +779,7 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 	channels_settings->module_min_output_voltage = 2000;
 	channels_settings->module_max_output_current = 10000;
 	channels_settings->module_min_output_current = 1;
-	channels_settings->module_max_output_power = 30000;
+	channels_settings->module_max_output_power = 20000;
 }
 
 
@@ -831,25 +831,25 @@ static relay_node_info_t *get_relay_node_info(channels_config_t *channels_config
 		uint8_t found = 1;
 
 		for(j = 0; j < 2; j++) {
-			if(channel_id_a == relay_node_info_item->channel_id[i]) {
+			if(channel_id_a == relay_node_info_item->channel_id[j]) {
 				break;
 			}
 		}
 
 		if(j == 2) {
 			found = 0;
-			break;
+			continue;
 		}
 
 		for(j = 0; j < 2; j++) {
-			if(channel_id_b == relay_node_info_item->channel_id[i]) {
+			if(channel_id_b == relay_node_info_item->channel_id[j]) {
 				break;
 			}
 		}
 
 		if(j == 2) {
 			found = 0;
-			break;
+			continue;
 		}
 
 		if(found != 0) {
@@ -904,12 +904,28 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 	struct list_head list_unneeded_power_module_group = LIST_HEAD_INIT(list_unneeded_power_module_group);
 	channel_info_t *channel_info_item;
 	channel_info_t *channel_info_item_prev;
+	power_module_group_info_t *power_module_group_info_item;
+	uint8_t assigned;
 
 	head = &channel_info->power_module_group_list;
 
 	list_for_each_safe(pos, n, head) {
 		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
 		list_move_tail(&power_module_group_info->list, &list_unneeded_power_module_group);
+	}
+
+	power_module_group_info_item = channels_info->power_module_group_info + channel_info->channel_id;
+
+	if(list_contain(&power_module_group_info_item->list, &list_unneeded_power_module_group) == 0) {
+		//恢复模块归属
+		list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+	}
+
+	assigned = list_size(&channel_info->power_module_group_list);
+
+	if(assigned >= channel_info->status.reassign_module_group_number) {
+		debug("channel %d reassign_module_group_number:%d, assigned:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number, assigned);
+		goto exit;
 	}
 
 	//left search
@@ -919,8 +935,14 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 	while(channel_info_item != NULL) {
 		uint8_t next_channel_id;
 		uint8_t next_power_module_group_id;
-		power_module_group_info_t *power_module_group_info_item;
 		relay_node_info_t *relay_node_info;
+
+		assigned = list_size(&channel_info->power_module_group_list);
+
+		if(assigned >= channel_info->status.reassign_module_group_number) {
+			debug("channel %d reassign_module_group_number:%d, assigned:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number, assigned);
+			goto exit;
+		}
 
 		if(channel_info_item->channel_id == 0) {
 			next_channel_id = channels_info->channel_number - 1;
@@ -967,8 +989,14 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 	while(channel_info_item != NULL) {
 		uint8_t next_channel_id;
 		uint8_t next_power_module_group_id;
-		power_module_group_info_t *power_module_group_info_item;
 		relay_node_info_t *relay_node_info;
+
+		assigned = list_size(&channel_info->power_module_group_list);
+
+		if(assigned >= channel_info->status.reassign_module_group_number) {
+			debug("channel %d reassign_module_group_number:%d, assigned:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number, assigned);
+			goto exit;
+		}
 
 		if(channel_info_item->channel_id == (channels_info->channel_number - 1)) {
 			next_channel_id = 0;
@@ -1008,6 +1036,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 		channel_info_item_prev = channel_info_item;
 	}
 
+exit:
 	head = &list_unneeded_power_module_group;
 
 	//清理需要关闭的模块
@@ -1019,6 +1048,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
 		}
 		list_move_tail(&power_module_group_info->list, &pdu_group_info->power_module_group_deactive_list);
+		debug("remove module group_id %d from channel_id %d", power_module_group_info->group_id, channel_info->channel_id);
 	}
 }
 
@@ -1068,6 +1098,32 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 	struct list_head *head;
 	channel_info_t *channel_info_item;
 	channel_info_t *channel_info_item_prev;
+	power_module_group_info_t *power_module_group_info_item;
+	uint8_t assigned;
+
+	power_module_group_info_item = channels_info->power_module_group_info + channel_info->channel_id;
+
+	if(list_contain(&power_module_group_info_item->list, &pdu_group_info->power_module_group_idle_list) == 0) {
+		power_module_item_info_t *power_module_item_info;
+		head = &power_module_group_info_item->power_module_item_list;
+		list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
+			if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
+				debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
+			}
+
+			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
+		}
+		power_module_group_info_item->channel_info = channel_info;
+		list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+		debug("assign module group_id %d to channel_id %d", power_module_group_info_item->group_id, channel_info->channel_id);
+	}
+
+	assigned = list_size(&channel_info->power_module_group_list);
+
+	if(assigned >= channel_info->status.reassign_module_group_number) {
+		debug("channel %d reassign_module_group_number:%d, assigned:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number, assigned);
+		return;
+	}
 
 	//left search
 	channel_info_item_prev = channel_info;
@@ -1076,7 +1132,6 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 	while(channel_info_item != NULL) {
 		uint8_t next_channel_id;
 		uint8_t next_power_module_group_id;
-		power_module_group_info_t *power_module_group_info_item;
 		uint8_t find_power_module_group = 0;
 		relay_node_info_t *relay_node_info;
 
@@ -1128,6 +1183,13 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			power_module_group_info_item->channel_info = channel_info;
 			list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
 			debug("assign module group_id %d to channel_id %d", power_module_group_info_item->group_id, channel_info->channel_id);
+
+			assigned = list_size(&channel_info->power_module_group_list);
+
+			if(assigned >= channel_info->status.reassign_module_group_number) {
+				debug("channel %d reassign_module_group_number:%d, assigned:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number, assigned);
+				return;
+			}
 		}
 
 		if(find_power_module_group == 0) {
@@ -1196,6 +1258,13 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			power_module_group_info_item->channel_info = channel_info;
 			list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
 			debug("assign module group_id %d to channel_id %d", power_module_group_info_item->group_id, channel_info->channel_id);
+
+			assigned = list_size(&channel_info->power_module_group_list);
+
+			if(assigned >= channel_info->status.reassign_module_group_number) {
+				debug("channel %d reassign_module_group_number:%d, assigned:%d", channel_info->channel_id, channel_info->status.reassign_module_group_number, assigned);
+				return;
+			}
 		}
 
 		if(find_power_module_group == 0) {
@@ -1765,10 +1834,10 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 				module_power_limit_correction(channels_settings, &channel_info->status.charge_output_voltage, &current);
 				power_module_item_set_out_voltage_current(power_module_item_info, voltage, current);
 
-				//debug("module_id %d setting_output_voltage:%d, setting_output_current:%d",
+				//debug("module_id %d setting voltage:%d, current:%d",
 				//      power_module_item_info->module_id,
-				//      power_module_item_info->status.setting_output_voltage,
-				//      power_module_item_info->status.setting_output_current);
+				//      voltage,
+				//      current);
 
 				if(abs(power_module_item_info->status.setting_output_voltage - power_module_item_info->status.module_output_voltage) <= 200) {
 					//if(ticks_duration(ticks, power_module_item_info->test_stamp) >= (power_module_item_info->module_id * 1000 / 4)) {
@@ -1813,10 +1882,10 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 			power_module_item_set_out_voltage_current(power_module_item_info,
 			        power_module_item_info->status.require_output_voltage,
 			        power_module_item_info->status.require_output_current);
-			//debug("module_id %d setting_output_voltage:%d, setting_output_current:%d",
+			//debug("module_id %d require_output_voltage:%d, require_output_current:%d",
 			//      power_module_item_info->module_id,
-			//      power_module_item_info->status.setting_output_voltage,
-			//      power_module_item_info->status.setting_output_current);
+			//      power_module_item_info->status.require_output_voltage,
+			//      power_module_item_info->status.require_output_current);
 		}
 		break;
 
