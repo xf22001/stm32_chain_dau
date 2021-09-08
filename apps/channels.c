@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月08日 星期三 11时28分52秒
+ *   修改日期：2021年09月08日 星期三 16时50分54秒
  *   描    述：
  *
  *================================================================*/
@@ -803,7 +803,7 @@ static void init_channels_settings(channels_info_t *channels_info)
 	load_channels_display_cache(channels_info);
 }
 
-static relay_node_info_t *get_relay_node_info(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id_a, uint8_t channel_id_b)
+static relay_node_info_t *get_relay_node_info_by_channel_id(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id_a, uint8_t channel_id_b)
 {
 	relay_node_info_t *relay_node_info = NULL;
 	relay_info_t *relay_info = &channels_config->relay_info;
@@ -861,6 +861,37 @@ static relay_node_info_t *get_relay_node_info(channels_config_t *channels_config
 	return relay_node_info;
 }
 
+static relay_node_info_t *get_relay_node_info_relay_id(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t relay_id)
+{
+	relay_node_info_t *relay_node_info = NULL;
+	relay_info_t *relay_info = &channels_config->relay_info;
+	pdu_group_relay_info_t *pdu_group_relay_info = NULL;
+	int i;
+
+	for(i = 0; i < relay_info->pdu_group_size; i++) {
+		pdu_group_relay_info_t *pdu_group_relay_info_item = relay_info->pdu_group_relay_info[i];
+
+		if(pdu_group_relay_info_item->pdu_group_id == pdu_group_id) {
+			pdu_group_relay_info = pdu_group_relay_info_item;
+			break;
+		}
+	}
+
+	if(pdu_group_relay_info == NULL) {
+		return relay_node_info;
+	}
+
+	for(i = 0; i < pdu_group_relay_info->size; i++) {
+		relay_node_info_t *relay_node_info_item = pdu_group_relay_info->relay_node_info[i];
+
+		if(relay_id == relay_node_info_item->relay_id) {
+			relay_node_info = relay_node_info_item;
+			break;
+		}
+	}
+
+	return relay_node_info;
+}
 
 static channel_relay_fb_node_info_t *get_channel_relay_fb_node_info(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id)
 {
@@ -940,6 +971,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 	channel_info_t *channel_info_item_prev;
 	power_module_group_info_t *power_module_group_info_item;
 	uint8_t assigned;
+	channel_relay_fb_node_info_t *channel_relay_fb_node_info;
 
 	head = &channel_info->power_module_group_list;
 
@@ -994,6 +1026,13 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 			break;
 		}
 
+		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		OS_ASSERT(channel_relay_fb_node_info != NULL);
+
+		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+			debug("");
+		}
+
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
 
@@ -1006,10 +1045,10 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 
 		//set relay channel_info_item_prev---channel_info_item, by id
 		//todo
-		relay_node_info = get_relay_node_info(channels_config,
-		                                      pdu_group_info->pdu_group_id,
-		                                      channel_info_item_prev->channel_id,
-		                                      channel_info_item->channel_id);
+		relay_node_info = get_relay_node_info_by_channel_id(channels_config,
+		                  pdu_group_info->pdu_group_id,
+		                  channel_info_item_prev->channel_id,
+		                  channel_info_item->channel_id);
 		OS_ASSERT(relay_node_info != NULL);
 		set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
 
@@ -1048,6 +1087,13 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 			break;
 		}
 
+		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		OS_ASSERT(channel_relay_fb_node_info != NULL);
+
+		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+			debug("");
+		}
+
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
 
@@ -1060,10 +1106,10 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 
 		//set relay channel_info_item_prev---channel_info_item, by id
 		//todo
-		relay_node_info = get_relay_node_info(channels_config,
-		                                      pdu_group_info->pdu_group_id,
-		                                      channel_info_item_prev->channel_id,
-		                                      channel_info_item->channel_id);
+		relay_node_info = get_relay_node_info_by_channel_id(channels_config,
+		                  pdu_group_info->pdu_group_id,
+		                  channel_info_item_prev->channel_id,
+		                  channel_info_item->channel_id);
 		OS_ASSERT(relay_node_info != NULL);
 		set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
 
@@ -1134,6 +1180,7 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 	channel_info_t *channel_info_item_prev;
 	power_module_group_info_t *power_module_group_info_item;
 	uint8_t assigned;
+	channel_relay_fb_node_info_t *channel_relay_fb_node_info;
 
 	power_module_group_info_item = channels_info->power_module_group_info + channel_info->channel_id;
 
@@ -1185,6 +1232,13 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			break;
 		}
 
+		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		OS_ASSERT(channel_relay_fb_node_info != NULL);
+
+		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+			debug("");
+		}
+
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
 
@@ -1199,10 +1253,10 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			find_power_module_group = 1;
 			//set relay channel_info_item_prev---channel_info_item, by id
 			//todo
-			relay_node_info = get_relay_node_info(channels_config,
-			                                      pdu_group_info->pdu_group_id,
-			                                      channel_info_item_prev->channel_id,
-			                                      channel_info_item->channel_id);
+			relay_node_info = get_relay_node_info_by_channel_id(channels_config,
+			                  pdu_group_info->pdu_group_id,
+			                  channel_info_item_prev->channel_id,
+			                  channel_info_item->channel_id);
 			OS_ASSERT(relay_node_info != NULL);
 			set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
 
@@ -1260,6 +1314,13 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			break;
 		}
 
+		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		OS_ASSERT(channel_relay_fb_node_info != NULL);
+
+		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+			debug("");
+		}
+
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
 
@@ -1274,10 +1335,10 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			find_power_module_group = 1;
 			//set relay channel_info_item_prev---channel_info_item, by id
 			//todo
-			relay_node_info = get_relay_node_info(channels_config,
-			                                      pdu_group_info->pdu_group_id,
-			                                      channel_info_item_prev->channel_id,
-			                                      channel_info_item->channel_id);
+			relay_node_info = get_relay_node_info_by_channel_id(channels_config,
+			                  pdu_group_info->pdu_group_id,
+			                  channel_info_item_prev->channel_id,
+			                  channel_info_item->channel_id);
 			OS_ASSERT(relay_node_info != NULL);
 			set_bitmap_value(pdu_group_info->relay_map, relay_node_info->relay_id, 1);
 
@@ -1433,6 +1494,51 @@ static pdu_group_info_power_module_group_policy_t *get_pdu_group_info_power_modu
 	return pdu_group_info_power_module_group_policy;
 }
 
+static void relay_map_action(pdu_group_info_t *pdu_group_info)
+{
+	int i;
+	bitmap_t *relay_map = pdu_group_info->relay_map;
+	channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
+	channels_config_t *channels_config = channels_info->channels_config;
+
+	for(i = 0; i < relay_map->size; i++) {
+		relay_node_info_t *relay_node_info = get_relay_node_info_relay_id(channels_config, pdu_group_info->pdu_group_id, i);
+		GPIO_PinState state = GPIO_PIN_RESET;
+
+		if(get_bitmap_value(relay_map, i) != 0) {
+			state = GPIO_PIN_SET;
+		}
+
+		HAL_GPIO_WritePin(relay_node_info->gpio_port, relay_node_info->gpio_pin, state);
+	}
+}
+
+static int sync_relay_map(pdu_group_info_t *pdu_group_info)
+{
+	int ret = 0;
+	int i;
+	bitmap_t *relay_map = pdu_group_info->relay_map;
+	channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
+	channels_config_t *channels_config = channels_info->channels_config;
+
+	for(i = 0; i < relay_map->size; i++) {
+		relay_node_info_t *relay_node_info = get_relay_node_info_relay_id(channels_config, pdu_group_info->pdu_group_id, i);
+		GPIO_PinState state = HAL_GPIO_ReadPin(relay_node_info->gpio_port_fb, relay_node_info->gpio_pin_fb);
+		GPIO_PinState expect_state = GPIO_PIN_RESET;
+
+		if(get_bitmap_value(relay_map, i) != 0) {
+			expect_state = GPIO_PIN_SET;
+		}
+
+		if(state != expect_state) {
+			ret = -1;
+			break;
+		}
+	}
+
+	return ret;
+}
+
 //根据通道状态变化，重新分配模块组
 static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 {
@@ -1468,7 +1574,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG: {//释放模块组后下发配置
-			//todo
+			relay_map_action(pdu_group_info);
 			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG_SYNC;
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
@@ -1477,11 +1583,12 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG_SYNC: {//释放模块组后配置同步
-			//todo
-			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN;
-			debug("pdu_group_id %d channels_change_state to state %s",
-			      pdu_group_info->pdu_group_id,
-			      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			if(sync_relay_map(pdu_group_info) == 0) {
+				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN;
+				debug("pdu_group_id %d channels_change_state to state %s",
+				      pdu_group_info->pdu_group_id,
+				      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			}
 		}
 		break;
 
@@ -1509,7 +1616,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG: {//分配模块组后下发配置
-			//todo
+			relay_map_action(pdu_group_info);
 			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG_SYNC;
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
@@ -1518,12 +1625,13 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG_SYNC: {//分配模块组后同步配置
-			//todo
-			channels_module_assign_ready(pdu_group_info);
-			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_IDLE;
-			debug("pdu_group_id %d channels_change_state to state %s",
-			      pdu_group_info->pdu_group_id,
-			      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			if(sync_relay_map(pdu_group_info) == 0) {
+				channels_module_assign_ready(pdu_group_info);
+				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_IDLE;
+				debug("pdu_group_id %d channels_change_state to state %s",
+				      pdu_group_info->pdu_group_id,
+				      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			}
 		}
 		break;
 
