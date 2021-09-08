@@ -6,7 +6,7 @@
  *   文件名称：channels_communication.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月25日 星期一 14时24分07秒
- :   修改日期：2021年08月17日 星期二 15时20分18秒
+ :   修改日期：2021年09月08日 星期三 16时55分31秒
  *   描    述：
  *
  *================================================================*/
@@ -762,16 +762,6 @@ static command_item_t command_item_modules_status = {
 	.request_callback = request_modules_status,
 	.response_callback = response_modules_status,
 };
-
-typedef struct {
-	uint8_t cmd;
-	uint8_t v_a_l;
-	uint8_t v_a_h;
-	uint8_t v_b_l;
-	uint8_t v_b_h;
-	uint8_t v_c_l;
-	uint8_t v_c_h;
-} input_voltage_info_t;
 
 static int request_input_voltage(channels_com_info_t *channels_com_info)
 {

@@ -6,7 +6,7 @@
  *   文件名称：channel_command.h
  *   创 建 者：肖飞
  *   创建日期：2020年05月26日 星期二 08时50分38秒
- *   修改日期：2021年06月18日 星期五 15时23分55秒
+ *   修改日期：2021年09月08日 星期三 16时56分29秒
  *   描    述：
  *
  *================================================================*/
@@ -46,7 +46,7 @@ typedef enum {
 	CHANNEL_CMD_CODE_PDU_STATUS = 101,
 	CHANNEL_CMD_CODE_MODULES_READY = 102,
 	CHANNEL_CMD_CODE_MODULES_STATUS = 105,
-	CHANNEL_CMD_CODE_INPUT_VOLTAGE = 102,
+	CHANNEL_CMD_CODE_INPUT_VOLTAGE = 106,
 	CHANNEL_CMD_CODE_TOTAL,
 } channel_cmd_code_t;
 
@@ -106,6 +106,16 @@ typedef struct {
 	uint8_t connect_state_l;
 	uint8_t connect_state_h;
 } module_status_t;
+
+typedef struct {
+	uint8_t cmd;
+	uint8_t v_a_l;
+	uint8_t v_a_h;
+	uint8_t v_b_l;
+	uint8_t v_b_h;
+	uint8_t v_c_l;
+	uint8_t v_c_h;
+} input_voltage_info_t;
 
 #pragma pack(pop)
 
