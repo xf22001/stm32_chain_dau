@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月07日 星期二 16时13分49秒
+ *   修改日期：2021年09月08日 星期三 11时28分52秒
  *   描    述：
  *
  *================================================================*/
@@ -763,15 +763,15 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 
 	pdu_config->policy = POWER_MODULE_POLICY_PRIORITY;
 
-	pdu_config->pdu_group_number = 2;
+	pdu_config->pdu_group_number = 1;
 
 	pdu_group_config = &pdu_config->pdu_group_config[0];
 	pdu_group_config->channel_number = 5;
 	pdu_group_config->power_module_number_per_power_module_group = 3;
 
-	pdu_group_config = &pdu_config->pdu_group_config[1];
-	pdu_group_config->channel_number = 5;
-	pdu_group_config->power_module_number_per_power_module_group = 3;
+	//pdu_group_config = &pdu_config->pdu_group_config[1];
+	//pdu_group_config->channel_number = 5;
+	//pdu_group_config->power_module_number_per_power_module_group = 3;
 
 	//channels_settings->power_module_type = POWER_MODULE_TYPE_WINLINE;
 	channels_settings->power_module_type = POWER_MODULE_TYPE_PSEUDO;
@@ -825,7 +825,7 @@ static relay_node_info_t *get_relay_node_info(channels_config_t *channels_config
 		return relay_node_info;
 	}
 
-	for(i = 0; i < pdu_group_relay_info->relay_node_info_size; i++) {
+	for(i = 0; i < pdu_group_relay_info->size; i++) {
 		relay_node_info_t *relay_node_info_item = pdu_group_relay_info->relay_node_info[i];
 		int j;
 		uint8_t found = 1;
@@ -860,6 +860,40 @@ static relay_node_info_t *get_relay_node_info(channels_config_t *channels_config
 
 	return relay_node_info;
 }
+
+
+static channel_relay_fb_node_info_t *get_channel_relay_fb_node_info(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id)
+{
+	channel_relay_fb_node_info_t *channel_relay_fb_node_info = NULL;
+	channel_relay_fb_info_t *channel_relay_fb_info = &channels_config->channel_relay_fb_info;
+	pdu_group_channel_relay_fb_info_t *pdu_group_channel_relay_fb_info = NULL;
+	int i;
+
+	for(i = 0; i < channel_relay_fb_info->pdu_group_size; i++) {
+		pdu_group_channel_relay_fb_info_t *pdu_group_channel_relay_fb_info_item = channel_relay_fb_info->pdu_group_channel_relay_fb_info[i];
+
+		if(pdu_group_channel_relay_fb_info_item->pdu_group_id == pdu_group_id) {
+			pdu_group_channel_relay_fb_info = pdu_group_channel_relay_fb_info_item;
+			break;
+		}
+	}
+
+	if(pdu_group_channel_relay_fb_info == NULL) {
+		return channel_relay_fb_node_info;
+	}
+
+	for(i = 0; i < pdu_group_channel_relay_fb_info->size; i++) {
+		channel_relay_fb_node_info_t *channel_relay_fb_node_info_item = pdu_group_channel_relay_fb_info->channel_relay_fb_node_info[i];
+
+		if(channel_relay_fb_node_info_item->channel_id == channel_id) {
+			channel_relay_fb_node_info = channel_relay_fb_node_info_item;
+			break;
+		}
+	}
+
+	return channel_relay_fb_node_info;
+}
+
 
 static void channel_info_deactive_power_module_group(channel_info_t *channel_info)
 {

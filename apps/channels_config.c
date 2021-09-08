@@ -6,7 +6,7 @@
  *   文件名称：channels_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时17分57秒
- *   修改日期：2021年09月07日 星期二 13时08分10秒
+ *   修改日期：2021年09月08日 星期三 11时30分20秒
  *   描    述：
  *
  *================================================================*/
@@ -23,71 +23,46 @@ extern UART_HandleTypeDef huart2;
 static relay_node_info_t relay_node_info_0_0 = {
 	.relay_id = 0,
 	.channel_id = {0, 1},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
+	.gpio_port = kg1_GPIO_Port,//km1-kg1
+	.gpio_pin = kg1_Pin,
+	.gpio_port_fb = fb1_GPIO_Port,
+	.gpio_pin_fb = fb1_Pin,
 };
 
 static relay_node_info_t relay_node_info_0_1 = {
 	.relay_id = 1,
 	.channel_id = {1, 2},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
+	.gpio_port = kg2_GPIO_Port,//km2-kg2
+	.gpio_pin = kg2_Pin,
+	.gpio_port_fb = fb2_GPIO_Port,
+	.gpio_pin_fb = fb2_Pin,
 };
 
 static relay_node_info_t relay_node_info_0_2 = {
 	.relay_id = 2,
 	.channel_id = {2, 3},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
+	.gpio_port = kg3_GPIO_Port,//km3-kg3
+	.gpio_pin = kg3_Pin,
+	.gpio_port_fb = fb3_GPIO_Port,
+	.gpio_pin_fb = fb3_Pin,
 };
 
 static relay_node_info_t relay_node_info_0_3 = {
 	.relay_id = 3,
 	.channel_id = {3, 4},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
+	.gpio_port = kg4_GPIO_Port,//km4-kg4
+	.gpio_pin = kg4_Pin,
+	.gpio_port_fb = fb4_GPIO_Port,
+	.gpio_pin_fb = fb4_Pin,
 };
 
 static relay_node_info_t relay_node_info_0_4 = {
 	.relay_id = 4,
 	.channel_id = {4, 0},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
-};
-
-static relay_node_info_t relay_node_info_1_0 = {
-	.relay_id = 0,
-	.channel_id = {5, 6},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
-};
-
-static relay_node_info_t relay_node_info_1_1 = {
-	.relay_id = 1,
-	.channel_id = {6, 7},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
-};
-
-static relay_node_info_t relay_node_info_1_2 = {
-	.relay_id = 2,
-	.channel_id = {7, 8},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
-};
-
-static relay_node_info_t relay_node_info_1_3 = {
-	.relay_id = 3,
-	.channel_id = {8, 9},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
-};
-
-static relay_node_info_t relay_node_info_1_4 = {
-	.relay_id = 4,
-	.channel_id = {9, 5},
-	.gpio_port = NULL,
-	.gpio_pin = 0,
+	.gpio_port = kg5_GPIO_Port,//km5-kg5
+	.gpio_pin = kg5_Pin,
+	.gpio_port_fb = fb5_GPIO_Port,
+	.gpio_pin_fb = fb5_Pin,
 };
 
 static relay_node_info_t *relay_node_info_0_sz[] = {
@@ -98,29 +73,62 @@ static relay_node_info_t *relay_node_info_0_sz[] = {
 	&relay_node_info_0_4,
 };
 
-static relay_node_info_t *relay_node_info_1_sz[] = {
-	&relay_node_info_1_0,
-	&relay_node_info_1_1,
-	&relay_node_info_1_2,
-	&relay_node_info_1_3,
-	&relay_node_info_1_4,
-};
-
 static pdu_group_relay_info_t pdu_group_relay_info_0 = {
 	.pdu_group_id = 0,
 	.relay_node_info = relay_node_info_0_sz,
-	.relay_node_info_size = ARRAY_SIZE(relay_node_info_0_sz),
-};
-
-static pdu_group_relay_info_t pdu_group_relay_info_1 = {
-	.pdu_group_id = 1,
-	.relay_node_info = relay_node_info_1_sz,
-	.relay_node_info_size = ARRAY_SIZE(relay_node_info_1_sz),
+	.size = ARRAY_SIZE(relay_node_info_0_sz),
 };
 
 static pdu_group_relay_info_t *pdu_group_relay_info_sz[] = {
 	&pdu_group_relay_info_0,
-	&pdu_group_relay_info_1,
+};
+
+static channel_relay_fb_node_info_t channel_relay_fb_node_info_0 = {
+	.channel_id = 0,
+	.gpio_port_fb = fb6_GPIO_Port,
+	.gpio_pin_fb = fb6_Pin,
+};
+
+static channel_relay_fb_node_info_t channel_relay_fb_node_info_1 = {
+	.channel_id = 1,
+	.gpio_port_fb = fb7_GPIO_Port,
+	.gpio_pin_fb = fb7_Pin,
+};
+
+static channel_relay_fb_node_info_t channel_relay_fb_node_info_2 = {
+	.channel_id = 2,
+	.gpio_port_fb = fb8_GPIO_Port,
+	.gpio_pin_fb = fb8_Pin,
+};
+
+static channel_relay_fb_node_info_t channel_relay_fb_node_info_3 = {
+	.channel_id = 3,
+	.gpio_port_fb = fb9_GPIO_Port,
+	.gpio_pin_fb = fb9_Pin,
+};
+
+static channel_relay_fb_node_info_t channel_relay_fb_node_info_4 = {
+	.channel_id = 4,
+	.gpio_port_fb = fb10_GPIO_Port,
+	.gpio_pin_fb = fb10_Pin,
+};
+
+static channel_relay_fb_node_info_t *channel_relay_fb_node_info_sz[] = {
+	&channel_relay_fb_node_info_0,
+	&channel_relay_fb_node_info_1,
+	&channel_relay_fb_node_info_2,
+	&channel_relay_fb_node_info_3,
+	&channel_relay_fb_node_info_4,
+};
+
+static pdu_group_channel_relay_fb_info_t pdu_group_channel_relay_fb_info_0 = {
+	.pdu_group_id = 0,
+	.size = ARRAY_SIZE(channel_relay_fb_node_info_sz),
+	.channel_relay_fb_node_info = channel_relay_fb_node_info_sz,
+};
+
+static pdu_group_channel_relay_fb_info_t *pdu_group_channel_relay_fb_info_sz[] = {
+	&pdu_group_channel_relay_fb_info_0,
 };
 
 static channels_config_t channels_config = {
@@ -148,6 +156,10 @@ static channels_config_t channels_config = {
 	.relay_info = {
 		.pdu_group_size = ARRAY_SIZE(pdu_group_relay_info_sz),
 		.pdu_group_relay_info = pdu_group_relay_info_sz,
+	},
+	.channel_relay_fb_info = {
+		.pdu_group_size = ARRAY_SIZE(pdu_group_channel_relay_fb_info_sz),
+		.pdu_group_channel_relay_fb_info = pdu_group_channel_relay_fb_info_sz,
 	},
 };
 

@@ -1,12 +1,12 @@
 
 
 /*================================================================
- *   
- *   
+ *
+ *
  *   文件名称：channels_config.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时15分08秒
- *   修改日期：2021年09月07日 星期二 11时49分52秒
+ *   修改日期：2021年09月08日 星期三 11时29分57秒
  *   描    述：
  *
  *================================================================*/
@@ -50,11 +50,13 @@ typedef struct {
 	uint8_t channel_id[2];
 	GPIO_TypeDef *gpio_port;
 	uint16_t gpio_pin;
+	GPIO_TypeDef *gpio_port_fb;
+	uint16_t gpio_pin_fb;
 } relay_node_info_t;
 
 typedef struct {
 	uint8_t pdu_group_id;
-	uint8_t relay_node_info_size;
+	uint8_t size;
 	relay_node_info_t **relay_node_info;
 } pdu_group_relay_info_t;
 
@@ -62,6 +64,23 @@ typedef struct {
 	uint8_t pdu_group_size;
 	pdu_group_relay_info_t **pdu_group_relay_info;
 } relay_info_t;
+
+typedef struct {
+	uint8_t channel_id;
+	GPIO_TypeDef *gpio_port_fb;
+	uint16_t gpio_pin_fb;
+} channel_relay_fb_node_info_t;
+
+typedef struct {
+	uint8_t pdu_group_id;
+	uint8_t size;
+	channel_relay_fb_node_info_t **channel_relay_fb_node_info;
+} pdu_group_channel_relay_fb_info_t;
+
+typedef struct {
+	uint8_t pdu_group_size;
+	pdu_group_channel_relay_fb_info_t **pdu_group_channel_relay_fb_info;
+} channel_relay_fb_info_t;
 
 typedef struct {
 	uint8_t id;
@@ -85,6 +104,7 @@ typedef struct {
 
 	display_config_t display_config;
 	relay_info_t relay_info;
+	channel_relay_fb_info_t channel_relay_fb_info;
 } channels_config_t;
 
 channels_config_t *get_channels_config(uint8_t id);
