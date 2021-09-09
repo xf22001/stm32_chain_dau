@@ -6,7 +6,7 @@
  *   文件名称：channels_communication.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月25日 星期一 14时24分07秒
- :   修改日期：2021年09月08日 星期三 16时55分31秒
+ :   修改日期：2021年09月09日 星期四 11时17分23秒
  *   描    述：
  *
  *================================================================*/
@@ -286,13 +286,22 @@ static int request_channel_require(channels_com_info_t *channels_com_info)
 	uint8_t channel_id = tx_get_id(channels_com_info);
 	uint8_t cmd_ctx_index = cmd_ctx_offset(channel_id, CHANNEL_CMD_CHANNEL_REQUIRE);
 	command_status_t *cmd_ctx = channels_com_info->cmd_ctx + cmd_ctx_index;
-	cmd_response_t *cmd_response = (cmd_response_t *)channels_com_info->can_tx_msg.Data;
+	channel_require_code_t *channel_require_code = (channel_require_code_t *)channels_com_info->can_tx_msg.Data;
+	channels_info_t *channels_info = (channels_info_t *)channels_com_info->channels_info;
+	channels_config_t *channels_config = channels_info->channels_config;
+	channel_info_t *channel_info = channels_info->channel_info + channel_id;
+	pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
+	channel_relay_fb_node_info_t *channel_relay_fb_node_info;
 
 	if(channel_id >= channel_number) {
 		return ret;
 	}
 
-	cmd_response->cmd = CHANNEL_CMD_CODE_CHANNEL_REQUIRE;
+	channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info->channel_id);
+	OS_ASSERT(channel_relay_fb_node_info != NULL);
+
+	channel_require_code->cmd = CHANNEL_CMD_CODE_CHANNEL_REQUIRE;
+	channel_require_code->relay_fb_state = HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb);
 
 	cmd_ctx->state = COMMAND_STATE_IDLE;
 

@@ -6,7 +6,7 @@
  *   文件名称：channel_command.h
  *   创 建 者：肖飞
  *   创建日期：2020年05月26日 星期二 08时50分38秒
- *   修改日期：2021年09月08日 星期三 16时56分29秒
+ *   修改日期：2021年09月09日 星期四 11时16分06秒
  *   描    述：
  *
  *================================================================*/
@@ -83,6 +83,11 @@ typedef struct {
 	uint8_t require_state;//channel_require_work_state_t
 	uint8_t fault_stop;
 } channel_require_t;
+
+typedef struct {
+	uint8_t cmd;
+	uint8_t relay_fb_state;//0断开，1闭合
+} channel_require_code_t;
 
 typedef struct {
 	uint8_t cmd;

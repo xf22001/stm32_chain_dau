@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月08日 星期三 16时50分54秒
+ *   修改日期：2021年09月09日 星期四 11时05分04秒
  *   描    述：
  *
  *================================================================*/
@@ -893,7 +893,7 @@ static relay_node_info_t *get_relay_node_info_relay_id(channels_config_t *channe
 	return relay_node_info;
 }
 
-static channel_relay_fb_node_info_t *get_channel_relay_fb_node_info(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id)
+channel_relay_fb_node_info_t *get_channel_relay_fb_node_info(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id)
 {
 	channel_relay_fb_node_info_t *channel_relay_fb_node_info = NULL;
 	channel_relay_fb_info_t *channel_relay_fb_info = &channels_config->channel_relay_fb_info;

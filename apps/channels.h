@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年09月07日 星期二 09时31分29秒
+ *   修改日期：2021年09月09日 星期四 11时14分43秒
  *   描    述：
  *
  *================================================================*/
@@ -301,10 +301,10 @@ int set_fault(bitmap_t *faults, int fault, uint8_t v);
 int get_fault(bitmap_t *faults, int fault);
 int get_first_fault(bitmap_t *faults);
 void free_channels_info(channels_info_t *channels_info);
+channel_relay_fb_node_info_t *get_channel_relay_fb_node_info(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t channel_id);
 char *get_power_module_item_state_des(power_module_item_state_t state);
 void set_power_module_policy_request(power_module_policy_t policy);
 void start_dump_channels_stats(void);
-void channels_process_channel_event(channels_info_t *channels_info, channel_event_t *channel_event);
 void task_channels(void const *argument);
 int send_channels_event(channels_info_t *channels_info, channels_event_t *channels_event, uint32_t timeout);
 void start_stop_channel(channels_info_t *channels_info, uint8_t channel_id, channel_event_type_t channel_event_type);
