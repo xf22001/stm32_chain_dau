@@ -1,4 +1,4 @@
-file build/eva.elf
+file build/chain_dau.elf
 target remote :2331
 set pagination off
 set print pretty on

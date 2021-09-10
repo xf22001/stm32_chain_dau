@@ -110,9 +110,9 @@ int main(void)
   MX_SPI2_Init();
   MX_USART2_UART_Init();
   MX_FATFS_Init();
-  MX_ADC1_Init();
   MX_RNG_Init();
   MX_MBEDTLS_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */

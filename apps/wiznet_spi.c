@@ -6,7 +6,7 @@
  *   文件名称：wiznet_spi.c
  *   创 建 者：肖飞
  *   创建日期：2021年05月19日 星期三 09时47分16秒
- *   修改日期：2021年08月23日 星期一 17时25分18秒
+ *   修改日期：2021年09月10日 星期五 15时55分19秒
  *   描    述：
  *
  *================================================================*/
@@ -70,12 +70,15 @@ void wiznet_spi_read_burst(uint8_t *pbuf, uint16_t len)
 
 void wiznet_spi_cs_select(void)
 {
+	HAL_GPIO_WritePin(spi1_cs_GPIO_Port, spi1_cs_Pin, GPIO_PIN_RESET);
 }
 
 void wiznet_spi_cs_deselect(void)
 {
+	HAL_GPIO_WritePin(spi1_cs_GPIO_Port, spi1_cs_Pin, GPIO_PIN_SET);
 }
 
 void set_lan_led(GPIO_PinState PinState)
 {
+	HAL_GPIO_WritePin(ledeth_GPIO_Port, ledeth_Pin, PinState);
 }

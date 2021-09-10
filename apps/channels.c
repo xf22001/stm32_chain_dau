@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月09日 星期四 11时05分04秒
+ *   修改日期：2021年09月10日 星期五 17时05分40秒
  *   描    述：
  *
  *================================================================*/
@@ -790,7 +790,7 @@ static void init_channels_settings(channels_info_t *channels_info)
 
 	ret = channels_info_load_config(channels_info);
 
-	ret = -1;
+	//ret = -1;
 
 	if(ret != 0) {
 		debug("load config failed! restore config...");
@@ -1030,7 +1030,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 		OS_ASSERT(channel_relay_fb_node_info != NULL);
 
 		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("");
+			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
 		}
 
 		next_power_module_group_id = next_channel_id;
@@ -1091,7 +1091,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 		OS_ASSERT(channel_relay_fb_node_info != NULL);
 
 		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("");
+			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
 		}
 
 		next_power_module_group_id = next_channel_id;
@@ -1236,7 +1236,7 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 		OS_ASSERT(channel_relay_fb_node_info != NULL);
 
 		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("");
+			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
 		}
 
 		next_power_module_group_id = next_channel_id;
@@ -1318,7 +1318,7 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 		OS_ASSERT(channel_relay_fb_node_info != NULL);
 
 		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("");
+			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
 		}
 
 		next_power_module_group_id = next_channel_id;
@@ -1531,6 +1531,7 @@ static int sync_relay_map(pdu_group_info_t *pdu_group_info)
 		}
 
 		if(state != expect_state) {
+			debug("relay %d relay state %d, except state %d", relay_node_info->relay_id, state, expect_state);
 			ret = -1;
 			break;
 		}

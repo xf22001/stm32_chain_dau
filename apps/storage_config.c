@@ -6,7 +6,7 @@
  *   文件名称：storage_config.c
  *   创 建 者：肖飞
  *   创建日期：2021年08月24日 星期二 21时28分12秒
- *   修改日期：2021年08月27日 星期五 10时34分55秒
+ *   修改日期：2021年09月10日 星期五 15时40分04秒
  *   描    述：
  *
  *================================================================*/
@@ -19,8 +19,8 @@ extern SPI_HandleTypeDef hspi2;
 static storage_config_t storage_config_eeprom = {
 	.type = STORAGE_TYPE_25LC1024,
 	.hstorage = &hspi2,
-	//.gpio_port_spi_cs = spi3_cs_GPIO_Port,
-	//.gpio_pin_spi_cs = spi3_cs_Pin,
+	.gpio_port_spi_cs = spi2_cs_GPIO_Port,
+	.gpio_pin_spi_cs = spi2_cs_Pin,
 	//.gpio_port_spi_wp = spi3_wp_GPIO_Port,
 	//.gpio_pin_spi_wp = spi3_wp_Pin,
 };

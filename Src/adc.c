@@ -54,7 +54,7 @@ void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_10;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_84CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -63,7 +63,6 @@ void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_11;
   sConfig.Rank = 2;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -86,7 +85,7 @@ void MX_ADC1_Init(void)
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -94,7 +93,7 @@ void MX_ADC1_Init(void)
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = 6;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -116,23 +115,28 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     __HAL_RCC_ADC1_CLK_ENABLE();
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
     /**ADC1 GPIO Configuration
     PC0     ------> ADC1_IN10
     PC1     ------> ADC1_IN11
     PC2     ------> ADC1_IN12
     PC3     ------> ADC1_IN13
-    PC4     ------> ADC1_IN14
-    PC5     ------> ADC1_IN15
+    PA0-WKUP     ------> ADC1_IN0
+    PA1     ------> ADC1_IN1
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5;
+    GPIO_InitStruct.Pin = ntc1_Pin|ntc2_Pin|ntc3_Pin|ntc4_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+    GPIO_InitStruct.Pin = ntc5_Pin|ntc6_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
     /* ADC1 DMA Init */
     /* ADC1 Init */
-    hdma_adc1.Instance = DMA2_Stream4;
+    hdma_adc1.Instance = DMA2_Stream0;
     hdma_adc1.Init.Channel = DMA_CHANNEL_0;
     hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -171,11 +175,12 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     PC1     ------> ADC1_IN11
     PC2     ------> ADC1_IN12
     PC3     ------> ADC1_IN13
-    PC4     ------> ADC1_IN14
-    PC5     ------> ADC1_IN15
+    PA0-WKUP     ------> ADC1_IN0
+    PA1     ------> ADC1_IN1
     */
-    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5);
+    HAL_GPIO_DeInit(GPIOC, ntc1_Pin|ntc2_Pin|ntc3_Pin|ntc4_Pin);
+
+    HAL_GPIO_DeInit(GPIOA, ntc5_Pin|ntc6_Pin);
 
     /* ADC1 DMA DeInit */
     HAL_DMA_DeInit(adcHandle->DMA_Handle);
