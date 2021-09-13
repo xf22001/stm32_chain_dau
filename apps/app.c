@@ -6,7 +6,7 @@
  *   文件名称：app.c
  *   创 建 者：肖飞
  *   创建日期：2019年10月11日 星期五 16时54分03秒
- *   修改日期：2021年09月10日 星期五 16时53分55秒
+ *   修改日期：2021年09月10日 星期五 17时30分11秒
  *   描    述：
  *
  *================================================================*/
@@ -264,11 +264,33 @@ void app(void const *argument)
 //	.duty_cycle = 0,
 //};
 
+
 static void update_work_led(void)
 {
 	//计数值小于duty_cycle,输出1;大于duty_cycle输出0
 	//uint16_t duty_cycle = get_duty_cycle_pattern(&work_pattern_state, 1000, 0, 20);
 	//__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, duty_cycle);
+}
+
+static void blink_work_led(uint32_t periodic)
+{
+	static uint8_t ledcpu_state = 0;
+	static uint32_t ledcpu_stamp = 0;
+	uint32_t ticks = osKernelSysTick();
+
+	if(ticks_duration(ticks, ledcpu_stamp) < periodic) {
+		return;
+	}
+
+	ledcpu_stamp = ticks;
+
+	if(ledcpu_state == 0) {
+		ledcpu_state = 1;
+		HAL_GPIO_WritePin(ledmcu_GPIO_Port, ledmcu_Pin, GPIO_PIN_SET);
+	} else {
+		ledcpu_state = 0;
+		HAL_GPIO_WritePin(ledmcu_GPIO_Port, ledmcu_Pin, GPIO_PIN_RESET);
+	}
 }
 
 void idle(void const *argument)
@@ -279,6 +301,7 @@ void idle(void const *argument)
 	while(1) {
 		HAL_IWDG_Refresh(&hiwdg);
 		update_work_led();
+		blink_work_led(1000);
 		osDelay(10);
 	}
 }
