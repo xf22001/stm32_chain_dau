@@ -6,7 +6,7 @@
  *   文件名称：wiznet_spi.c
  *   创 建 者：肖飞
  *   创建日期：2021年05月19日 星期三 09时47分16秒
- *   修改日期：2021年09月10日 星期五 15时55分19秒
+ *   修改日期：2021年09月13日 星期一 13时20分39秒
  *   描    述：
  *
  *================================================================*/
@@ -25,6 +25,7 @@ int wiznet_spi_init(void)
 	int ret = 0;
 	spi_info = get_or_alloc_spi_info(&hspi1);
 	OS_ASSERT(spi_info != NULL);
+	set_spi_led(spi_info, ledeth_GPIO_Port, ledeth_Pin);
 	return ret;
 }
 

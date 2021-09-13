@@ -6,7 +6,7 @@
  *   文件名称：channels_config.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时15分08秒
- *   修改日期：2021年09月08日 星期三 11时29分57秒
+ *   修改日期：2021年09月13日 星期一 13时10分54秒
  *   描    述：
  *
  *================================================================*/
@@ -43,6 +43,8 @@ typedef struct {
 	void *huart;
 	void *con_gpio;
 	uint16_t con_pin;
+	void *led_gpio;
+	uint16_t led_pin;
 } display_config_t;
 
 typedef struct {

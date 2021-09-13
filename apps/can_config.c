@@ -6,12 +6,13 @@
  *   文件名称：can_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年04月17日 星期五 09时16分53秒
- *   修改日期：2020年04月29日 星期三 11时02分29秒
+ *   修改日期：2021年09月13日 星期一 13时04分43秒
  *   描    述：
  *
  *================================================================*/
 #include "can_config.h"
 #include "os_utils.h"
+#include "main.h"
 
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
@@ -28,6 +29,8 @@ can_config_t can_config_can1 = {
 	.filter_mask_rtr = 0,
 	.filter_ext = 0,
 	.filter_mask_ext = 0,
+	.led_gpio = ledcan1_GPIO_Port,
+	.led_pin = ledcan1_Pin,
 };
 
 can_config_t can_config_can2 = {
@@ -42,6 +45,8 @@ can_config_t can_config_can2 = {
 	.filter_mask_rtr = 0,
 	.filter_ext = 0,
 	.filter_mask_ext = 0,
+	.led_gpio = ledcan2_GPIO_Port,
+	.led_pin = ledcan2_Pin,
 };
 
 static can_config_t *can_config_sz[] = {

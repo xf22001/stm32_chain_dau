@@ -6,7 +6,7 @@
  *   文件名称：channels_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时17分57秒
- *   修改日期：2021年09月08日 星期三 11时30分20秒
+ *   修改日期：2021年09月13日 星期一 13时25分39秒
  *   描    述：
  *
  *================================================================*/
@@ -146,6 +146,10 @@ static channels_config_t channels_config = {
 
 	.display_config = {
 		.huart = &huart2,
+		.con_gpio = con485_GPIO_Port,
+		.con_pin = con485_Pin,
+		.led_gpio = led485_GPIO_Port,
+		.led_pin = led485_Pin,
 	},
 
 	.power_module_config = {
