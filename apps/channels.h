@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年09月09日 星期四 11时14分43秒
+ *   修改日期：2021年09月15日 星期三 14时23分40秒
  *   描    述：
  *
  *================================================================*/
@@ -30,7 +30,7 @@ extern "C"
 }
 #endif
 
-#define CHANNEL_TASK_PERIODIC (50)
+#define CHANNEL_TASK_PERIODIC (10)
 
 typedef enum {
 	CHANNELS_CHANGE_STATE_IDLE = 0,
