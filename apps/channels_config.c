@@ -6,7 +6,7 @@
  *   文件名称：channels_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时17分57秒
- *   修改日期：2021年09月13日 星期一 13时25分39秒
+ *   修改日期：2021年09月17日 星期五 09时13分50秒
  *   描    述：
  *
  *================================================================*/
@@ -133,13 +133,13 @@ static pdu_group_channel_relay_fb_info_t *pdu_group_channel_relay_fb_info_sz[] =
 
 static channels_config_t channels_config = {
 	.id = 0,
-	.hcan_com = &hcan2,
-	.gpio_port_force_stop = in4_GPIO_Port,
-	.gpio_pin_force_stop = in4_Pin,
-	.gpio_port_fan = rey1_GPIO_Port,
-	.gpio_pin_fan = rey1_Pin,
-	.gpio_port_door = in2_GPIO_Port,
-	.gpio_pin_door = in2_Pin,
+	.hcan_com = &hcan1,
+	.gpio_port_force_stop = in2_GPIO_Port,
+	.gpio_pin_force_stop = in2_Pin,
+	.gpio_port_fan = rey5_GPIO_Port,
+	.gpio_pin_fan = rey5_Pin,
+	.gpio_port_door = in1_GPIO_Port,
+	.gpio_pin_door = in1_Pin,
 
 	.channel_number = 0,
 	.relay_board_number = 0,
@@ -154,7 +154,7 @@ static channels_config_t channels_config = {
 
 	.power_module_config = {
 		.channels_power_module_number = 0,
-		.hcan = &hcan1,
+		.hcan = &hcan2,
 		.channels_power_module_type = CHANNELS_POWER_MODULE_TYPE_NATIVE,
 	},
 	.relay_info = {
