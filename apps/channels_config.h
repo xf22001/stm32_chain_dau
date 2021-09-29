@@ -6,7 +6,7 @@
  *   文件名称：channels_config.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时15分08秒
- *   修改日期：2021年09月13日 星期一 13时10分54秒
+ *   修改日期：2021年09月18日 星期六 11时14分50秒
  *   描    述：
  *
  *================================================================*/
@@ -71,6 +71,8 @@ typedef struct {
 	uint8_t channel_id;
 	GPIO_TypeDef *gpio_port_fb;
 	uint16_t gpio_pin_fb;
+	ADC_HandleTypeDef *hadc;
+	uint8_t rank;
 } channel_relay_fb_node_info_t;
 
 typedef struct {

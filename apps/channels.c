@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月10日 星期五 17时05分40秒
+ *   修改日期：2021年09月18日 星期六 12时56分37秒
  *   描    述：
  *
  *================================================================*/
@@ -24,6 +24,8 @@
 #include "modbus_addr_handler.h"
 #include "config_layout.h"
 #include "display.h"
+#include "hw_adc.h"
+#include "ntc_temperature.h"
 
 #include "log.h"
 
@@ -1832,7 +1834,7 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 			if(channel_info != NULL) {
 				debug("channel_id %d stop by module_id %d fault",
 				      channel_info->channel_id, power_module_item_info->module_id);
-				channel_info->channel_request_state = CHANNEL_REQUEST_STATE_STOP;
+				try_to_stop_channel(channel_info);
 			}
 
 			list_for_each_entry(power_module_item_info_deactive, head, power_module_item_info_t, list) {
@@ -2437,6 +2439,51 @@ static void handle_gpio_signal(channels_info_t *channels_info)
 	}
 }
 
+static void handle_channels_ntc_signal(channels_info_t *channels_info)
+{
+	int i;
+	channels_config_t *channels_config = channels_info->channels_config;
+
+	for(i = 0; i < channels_info->channel_number; i++) {
+		channel_info_t *channel_info_item = channels_info->channel_info + i;
+		uint8_t pdu_group_id = channel_info_item->pdu_group_info->pdu_group_id;
+		channel_relay_fb_node_info_t *channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_id, channel_info_item->channel_id);
+		adc_info_t *adc_info;
+		uint16_t ntc_adc_value;
+		int ntc_value;
+		uint8_t over_temperature = 0;
+
+		if(channel_relay_fb_node_info == NULL) {
+			debug("");
+			continue;
+		}
+
+		adc_info = get_or_alloc_adc_info(channel_relay_fb_node_info->hadc);
+
+		if(adc_info == NULL) {
+			debug("");
+			continue;
+		}
+
+		ntc_adc_value = get_adc_value(adc_info, channel_relay_fb_node_info->rank);
+		//debug("channel %d ntc_adc_value:%d", channel_info_item->channel_id, ntc_adc_value);
+		ntc_value = get_ntc_temperature(10000, ntc_adc_value, 4095);
+		//debug("channel %d ntc_value:%d", channel_info_item->channel_id, ntc_value);
+
+		if(ntc_value >= 85) {
+			over_temperature = 1;
+		}
+
+		if(get_fault(channel_info_item->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT) != over_temperature) {
+			set_fault(channel_info_item->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT, over_temperature);
+
+			if(over_temperature == 1) {
+				try_to_stop_channel(channel_info_item);
+			}
+		}
+	}
+}
+
 static void handle_common_periodic(void *fn_ctx, void *chain_ctx)
 {
 	channels_info_t *channels_info = (channels_info_t *)fn_ctx;
@@ -2461,6 +2508,8 @@ static void handle_common_periodic(void *fn_ctx, void *chain_ctx)
 	do_dump_channels_stats(channels_info);
 
 	handle_gpio_signal(channels_info);
+
+	handle_channels_ntc_signal(channels_info);
 
 	handle_channels_fault(channels_info);
 }

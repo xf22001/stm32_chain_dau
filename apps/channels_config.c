@@ -6,7 +6,7 @@
  *   文件名称：channels_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时17分57秒
- *   修改日期：2021年09月17日 星期五 09时13分50秒
+ *   修改日期：2021年09月18日 星期六 11时35分30秒
  *   描    述：
  *
  *================================================================*/
@@ -19,6 +19,7 @@
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 extern UART_HandleTypeDef huart2;
+extern ADC_HandleTypeDef hadc1;
 
 static relay_node_info_t relay_node_info_0_0 = {
 	.relay_id = 0,
@@ -87,30 +88,40 @@ static channel_relay_fb_node_info_t channel_relay_fb_node_info_0 = {
 	.channel_id = 0,
 	.gpio_port_fb = fb6_GPIO_Port,
 	.gpio_pin_fb = fb6_Pin,
+	.hadc = &hadc1,
+	.rank = 0,
 };
 
 static channel_relay_fb_node_info_t channel_relay_fb_node_info_1 = {
 	.channel_id = 1,
 	.gpio_port_fb = fb7_GPIO_Port,
 	.gpio_pin_fb = fb7_Pin,
+	.hadc = &hadc1,
+	.rank = 1,
 };
 
 static channel_relay_fb_node_info_t channel_relay_fb_node_info_2 = {
 	.channel_id = 2,
 	.gpio_port_fb = fb8_GPIO_Port,
 	.gpio_pin_fb = fb8_Pin,
+	.hadc = &hadc1,
+	.rank = 2,
 };
 
 static channel_relay_fb_node_info_t channel_relay_fb_node_info_3 = {
 	.channel_id = 3,
 	.gpio_port_fb = fb9_GPIO_Port,
 	.gpio_pin_fb = fb9_Pin,
+	.hadc = &hadc1,
+	.rank = 3,
 };
 
 static channel_relay_fb_node_info_t channel_relay_fb_node_info_4 = {
 	.channel_id = 4,
 	.gpio_port_fb = fb10_GPIO_Port,
 	.gpio_pin_fb = fb10_Pin,
+	.hadc = &hadc1,
+	.rank = 4,
 };
 
 static channel_relay_fb_node_info_t *channel_relay_fb_node_info_sz[] = {

@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年09月15日 星期三 14时23分40秒
+ *   修改日期：2021年09月18日 星期六 12时46分03秒
  *   描    述：
  *
  *================================================================*/
@@ -141,6 +141,7 @@ typedef struct {
 typedef enum {
 	CHANNEL_FAULT_FAULT = 0,
 	CHANNEL_FAULT_CONNECT_TIMEOUT,
+	CHANNEL_FAULT_OVER_TEMPERATURE,
 	CHANNEL_FAULT_SIZE,
 } channel_fault_t;
 

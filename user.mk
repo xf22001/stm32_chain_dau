@@ -6,7 +6,7 @@
 #   文件名称：user.mk
 #   创 建 者：肖飞
 #   创建日期：2019年10月25日 星期五 13时04分38秒
-#   修改日期：2021年09月06日 星期一 11时28分05秒
+#   修改日期：2021年09月18日 星期六 11时11分20秒
 #   描    述：
 #
 #================================================================
@@ -80,6 +80,7 @@ USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_stategrid
 USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_yyln.c
 USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_winline.c
 USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_zte.c
+USER_C_SOURCES += apps/modules/app/ntc_temperature.c
 USER_C_SOURCES += apps/modules/hardware/flash.c
 USER_C_SOURCES += apps/modules/hardware/modbus_slave_txrx.c
 USER_C_SOURCES += apps/modules/hardware/modbus_spec.c
@@ -93,6 +94,7 @@ endif
 ifdef CONFIG_STORAGE_W25Q256
 USER_C_SOURCES += apps/modules/hardware/storage_w25q256.c
 endif
+USER_C_SOURCES += apps/modules/hardware/hw_adc.c
 USER_C_SOURCES += apps/modules/drivers/spi_txrx.c
 USER_C_SOURCES += apps/modules/drivers/can_txrx.c
 USER_C_SOURCES += apps/modules/drivers/can_ops_hal.c
