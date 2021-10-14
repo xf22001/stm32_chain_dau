@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年09月18日 星期六 12时56分37秒
+ *   修改日期：2021年10月14日 星期四 10时53分11秒
  *   描    述：
  *
  *================================================================*/
@@ -775,8 +775,8 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 	//pdu_group_config->channel_number = 5;
 	//pdu_group_config->power_module_number_per_power_module_group = 3;
 
-	//channels_settings->power_module_type = POWER_MODULE_TYPE_WINLINE;
-	channels_settings->power_module_type = POWER_MODULE_TYPE_PSEUDO;
+	channels_settings->power_module_type = POWER_MODULE_TYPE_ZTE;
+	//channels_settings->power_module_type = POWER_MODULE_TYPE_PSEUDO;
 	channels_settings->module_max_output_voltage = 10000;
 	channels_settings->module_min_output_voltage = 2000;
 	channels_settings->module_max_output_current = 10000;

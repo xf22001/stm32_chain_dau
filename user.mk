@@ -6,7 +6,7 @@
 #   文件名称：user.mk
 #   创 建 者：肖飞
 #   创建日期：2019年10月25日 星期五 13时04分38秒
-#   修改日期：2021年09月18日 星期六 11时11分20秒
+#   修改日期：2021年10月14日 星期四 10时51分28秒
 #   描    述：
 #
 #================================================================
@@ -63,7 +63,7 @@ USER_C_SOURCES += apps/modules/app/config_utils.c
 USER_C_SOURCES += apps/modules/app/poll_loop.c
 USER_C_SOURCES += apps/modules/app/probe_tool.c
 USER_C_SOURCES += apps/modules/app/uart_debug.c
-USER_C_SOURCES += apps/modules/app/net_client/request.c
+USER_C_SOURCES += apps/modules/app/request.c
 USER_C_SOURCES += apps/modules/app/can_data_task.c
 USER_C_SOURCES += apps/modules/app/uart_data_task.c
 USER_C_SOURCES += apps/modules/app/usbh_user_callback.c
