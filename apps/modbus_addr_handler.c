@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时13分49秒
- *   修改日期：2021年09月06日 星期一 14时12分12秒
+ *   修改日期：2021年10月15日 星期五 15时53分02秒
  *   描    述：
  *
  *================================================================*/
@@ -66,6 +66,9 @@ char *get_modbus_slave_addr_des(modbus_slave_addr_t addr)
 			add_enum_module_info_des_case(9);
 			add_enum_module_info_des_case(10);
 			add_enum_module_info_des_case(11);
+			add_enum_module_info_des_case(12);
+			add_enum_module_info_des_case(13);
+			add_enum_module_info_des_case(14);
 
 			add_enum_channel_info_des_case(0);
 			add_enum_channel_info_des_case(1);
@@ -240,6 +243,9 @@ static void get_module_enum_info(modbus_slave_addr_t addr, enum_info_t *enum_inf
 			add_get_module_enum_info_case(9, enum_info);
 			add_get_module_enum_info_case(10, enum_info);
 			add_get_module_enum_info_case(11, enum_info);
+			add_get_module_enum_info_case(12, enum_info);
+			add_get_module_enum_info_case(13, enum_info);
+			add_get_module_enum_info_case(14, enum_info);
 
 		default: {
 			debug("not handle addr %s", get_modbus_slave_addr_des(addr));
@@ -681,7 +687,10 @@ void channels_modbus_data_action(void *fn_ctx, void *chain_ctx)
 		case add_modbus_data_get_set_module_info_case(8):
 		case add_modbus_data_get_set_module_info_case(9):
 		case add_modbus_data_get_set_module_info_case(10):
-		case add_modbus_data_get_set_module_info_case(11): {
+		case add_modbus_data_get_set_module_info_case(11):
+		case add_modbus_data_get_set_module_info_case(12):
+		case add_modbus_data_get_set_module_info_case(13):
+		case add_modbus_data_get_set_module_info_case(14): {
 			enum_info_t module_enum_info;
 			get_module_enum_info(modbus_data_ctx->addr, &module_enum_info);
 			//debug("%s module_id %d field %s",
