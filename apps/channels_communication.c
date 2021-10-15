@@ -6,7 +6,7 @@
  *   文件名称：channels_communication.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月25日 星期一 14时24分07秒
- :   修改日期：2021年09月09日 星期四 11时17分23秒
+ :   修改日期：2021年10月15日 星期五 12时12分20秒
  *   描    述：
  *
  *================================================================*/
@@ -122,13 +122,13 @@ typedef struct {
 static uint8_t tx_get_id(channels_com_info_t *channels_com_info)
 {
 	u_com_can_tx_id_t *u_com_can_tx_id = (u_com_can_tx_id_t *)&channels_com_info->can_tx_msg.ExtId;
-	return u_com_can_tx_id->s.dst_id;
+	return u_com_can_tx_id->s.dst_id - 1;
 }
 
 static uint8_t rx_get_id(channels_com_info_t *channels_com_info)
 {
 	u_com_can_rx_id_t *u_com_can_rx_id = (u_com_can_rx_id_t *)&channels_com_info->can_rx_msg->ExtId;
-	return u_com_can_rx_id->s.dst_id;
+	return u_com_can_rx_id->s.dst_id - 1;
 }
 
 static uint32_t cmd_ctx_offset(uint8_t channel_id, uint8_t cmd)
@@ -584,7 +584,7 @@ static int request_pdu_status(channels_com_info_t *channels_com_info)
 	cmd_request->fault_stop = pdu_fault(channels_info);
 	cmd_request->pdu_idle = pdu_channels_idle(channels_info);
 
-	cmd_ctx->state = COMMAND_STATE_IDLE;
+	cmd_ctx->state = COMMAND_STATE_RESPONSE;
 
 	ret = 0;
 
@@ -614,7 +614,7 @@ static command_item_t command_item_pdu_status = {
 	.cmd = CHANNEL_CMD_PDU_STATUS,
 	.cmd_code = CHANNEL_CMD_CODE_PDU_STATUS,
 	.broadcast = 1,
-	.request_period = 500,
+	.request_period = 50,
 	.request_callback = request_pdu_status,
 	.response_callback = response_pdu_status,
 };
@@ -985,7 +985,7 @@ static void channels_com_request(channels_com_info_t *channels_com_info)
 			u_com_can_tx_id->s.flag = 0x15;
 			u_com_can_tx_id->s.src_id = 0xff;
 
-			u_com_can_tx_id->s.dst_id = j;
+			u_com_can_tx_id->s.dst_id = j + 1;
 
 			channels_com_info->can_tx_msg.IDE = CAN_ID_EXT;
 			channels_com_info->can_tx_msg.RTR = CAN_RTR_DATA;
@@ -1006,9 +1006,7 @@ static void channels_com_request(channels_com_info_t *channels_com_info)
 
 			cmd_ctx->send_stamp = ticks;
 
-			if(item->broadcast == 0) {
-				u_com_can_tx_id->s.dst_id = j + 1;
-			} else {
+			if(item->broadcast != 0) {
 				u_com_can_tx_id->s.dst_id = 0x00;
 			}
 
@@ -1048,8 +1046,7 @@ static int channels_com_response(channels_com_info_t *channels_com_info, can_rx_
 		return ret;
 	}
 
-	u_com_can_rx_id->s.dst_id -= 1;
-	channel_id = u_com_can_rx_id->s.dst_id;
+	channel_id = u_com_can_rx_id->s.dst_id - 1;
 
 	if(channel_id >= channel_number) {
 		debug("channel_id:%d!", channel_id);
