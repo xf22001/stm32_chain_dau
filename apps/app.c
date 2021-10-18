@@ -6,7 +6,7 @@
  *   文件名称：app.c
  *   创 建 者：肖飞
  *   创建日期：2019年10月11日 星期五 16时54分03秒
- *   修改日期：2021年10月14日 星期四 11时03分27秒
+ *   修改日期：2021年10月18日 星期一 15时06分19秒
  *   描    述：
  *
  *================================================================*/
@@ -168,6 +168,19 @@ void update_network_ip_config(app_info_t *app_info)
 	}
 }
 
+static uint8_t reset_config = 0;
+
+void app_set_reset_config(void)
+{
+	OS_ASSERT(app_info != NULL);
+	app_info->mechine_info.reset_config = 1;
+}
+
+uint8_t app_get_reset_config(void)
+{
+	return reset_config;
+}
+
 void app(void const *argument)
 {
 
@@ -185,7 +198,13 @@ void app(void const *argument)
 
 	ret = app_load_config();
 
-	//ret = -1;
+	if(ret == 0) {
+		reset_config = app_info->mechine_info.reset_config;
+
+		if(app_get_reset_config() != 0) {
+			ret = -1;
+		}
+	}
 
 	if(ret == 0) {
 		debug("app_load_config successful!");
@@ -195,11 +214,15 @@ void app(void const *argument)
 		snprintf(app_info->mechine_info.device_id, sizeof(app_info->mechine_info.device_id), "%s", "0000000000");
 		snprintf(app_info->mechine_info.uri, sizeof(app_info->mechine_info.uri), "%s", "tcp://112.74.40.227:12345");
 		debug("device id:\'%s\', server uri:\'%s\'!", app_info->mechine_info.device_id, app_info->mechine_info.uri);
-		snprintf(app_info->mechine_info.ip, sizeof(app_info->mechine_info.ip), "%d.%d.%d.%d", 10, 42, 0, 122);
+		//snprintf(app_info->mechine_info.ip, sizeof(app_info->mechine_info.ip), "%d.%d.%d.%d", 10, 42, 0, 122);
+		//snprintf(app_info->mechine_info.sn, sizeof(app_info->mechine_info.sn), "%d.%d.%d.%d", 255, 255, 255, 0);
+		//snprintf(app_info->mechine_info.gw, sizeof(app_info->mechine_info.gw), "%d.%d.%d.%d", 10, 42, 0, 1);
+		snprintf(app_info->mechine_info.ip, sizeof(app_info->mechine_info.ip), "%d.%d.%d.%d", 192, 168, 1, 122);
 		snprintf(app_info->mechine_info.sn, sizeof(app_info->mechine_info.sn), "%d.%d.%d.%d", 255, 255, 255, 0);
-		snprintf(app_info->mechine_info.gw, sizeof(app_info->mechine_info.gw), "%d.%d.%d.%d", 10, 42, 0, 1);
+		snprintf(app_info->mechine_info.gw, sizeof(app_info->mechine_info.gw), "%d.%d.%d.%d", 192, 168, 1, 1);
 		app_info->mechine_info.dhcp_enable = 0;
 		app_info->mechine_info.upgrade_enable = 0;
+		app_info->mechine_info.reset_config = 0;
 		app_save_config();
 	}
 

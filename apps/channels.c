@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月14日 星期四 10时53分11秒
+ *   修改日期：2021年10月18日 星期一 14时38分45秒
  *   描    述：
  *
  *================================================================*/
@@ -777,9 +777,9 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 
 	channels_settings->power_module_type = POWER_MODULE_TYPE_ZTE;
 	//channels_settings->power_module_type = POWER_MODULE_TYPE_PSEUDO;
-	channels_settings->module_max_output_voltage = 10000;
+	channels_settings->module_max_output_voltage = 7500;
 	channels_settings->module_min_output_voltage = 2000;
-	channels_settings->module_max_output_current = 10000;
+	channels_settings->module_max_output_current = 1000;
 	channels_settings->module_min_output_current = 1;
 	channels_settings->module_max_output_power = 20000;
 }
@@ -1783,7 +1783,10 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 	}
 
 	if(ticks_duration(ticks, get_power_module_connect_stamp(power_module_info)) >= (10 * 1000)) {
-		debug("ticks:%d, power module_id %d stamps:%d", ticks, power_module_item_info->module_id, get_power_module_connect_stamp(power_module_info));
+		if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_DISABLE) {
+			debug("ticks:%d, power module_id %d stamps:%d", ticks, power_module_item_info->module_id, get_power_module_connect_stamp(power_module_info));
+		}
+
 		connect_timeout = 1;
 	} else {
 		connect_timeout = 0;
