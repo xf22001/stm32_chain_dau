@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月18日 星期一 14时38分45秒
+ *   修改日期：2021年10月18日 星期一 15时12分25秒
  *   描    述：
  *
  *================================================================*/
@@ -2481,6 +2481,7 @@ static void handle_channels_ntc_signal(channels_info_t *channels_info)
 			set_fault(channel_info_item->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT, over_temperature);
 
 			if(over_temperature == 1) {
+				debug("channel_id %d stop by ntc over_temperature fault", channel_info_item->channel_id);
 				try_to_stop_channel(channel_info_item);
 			}
 		}
