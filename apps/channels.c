@@ -792,7 +792,11 @@ static void init_channels_settings(channels_info_t *channels_info)
 
 	ret = channels_info_load_config(channels_info);
 
-	//ret = -1;
+	if(ret == 0) {
+		if(app_get_reset_config() != 0) {
+			ret = -1;
+		}
+	}
 
 	if(ret != 0) {
 		debug("load config failed! restore config...");
