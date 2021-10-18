@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月18日 星期一 15时12分25秒
+ *   修改日期：2021年10月18日 星期一 21时25分41秒
  *   描    述：
  *
  *================================================================*/
@@ -641,12 +641,25 @@ static void handle_power_module_group_info(channel_info_t *channel_info, uint16_
 	}
 }
 
+static void channel_power_limit_correction(uint32_t channel_max_output_power, uint16_t *voltage, uint16_t *current)
+{
+	uint32_t power = *voltage * *current;
+
+	uint32_t max_power = channel_max_output_power * 100;
+
+	if(power > max_power) {
+		*current = max_power / *voltage;
+	}
+}
+
 static void handle_channel_power_module_group_info(channel_info_t *channel_info)
 {
 	struct list_head *head;
 	uint8_t module_group_size;
 	uint16_t module_require_voltage;
 	uint16_t module_group_require_current;
+	uint16_t charge_output_voltage = channel_info->status.charge_output_voltage;
+	uint16_t require_output_current = channel_info->status.require_output_current;
 
 	head = &channel_info->power_module_group_list;
 
@@ -656,11 +669,11 @@ static void handle_channel_power_module_group_info(channel_info_t *channel_info)
 		return;
 	}
 
-	if(channel_info->status.require_output_stamp == channel_info->status.module_sync_stamp) {
-		return;
-	}
+	//if(channel_info->status.require_output_stamp == channel_info->status.module_sync_stamp) {
+	//	return;
+	//}
 
-	channel_info->status.module_sync_stamp = channel_info->status.require_output_stamp;
+	//channel_info->status.module_sync_stamp = channel_info->status.require_output_stamp;
 
 	//debug("setting channel_id %d, require_output_voltage:%d, require_output_current:%d",
 	//      channel_info->channel_id,
@@ -668,7 +681,13 @@ static void handle_channel_power_module_group_info(channel_info_t *channel_info)
 	//      channel_info->status.require_output_current);
 
 	module_require_voltage = channel_info->status.require_output_voltage;
-	module_group_require_current = channel_info->status.require_output_current / module_group_size;
+	channel_power_limit_correction(channel_info->channel_max_output_power, &charge_output_voltage, &require_output_current);
+	//debug("channel %d channel_max_output_power:%d, charge_output_voltage:%d, require_output_current:%d",
+	//      channel_info->channel_id,
+	//      channel_info->channel_max_output_power,
+	//      charge_output_voltage,
+	//      require_output_current);
+	module_group_require_current = require_output_current / module_group_size;
 
 	handle_power_module_group_info(channel_info, module_require_voltage, module_group_require_current);
 }
@@ -782,6 +801,7 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 	channels_settings->module_max_output_current = 1000;
 	channels_settings->module_min_output_current = 1;
 	channels_settings->module_max_output_power = 20000;
+	channels_settings->channels_max_output_power = 300000;
 }
 
 
@@ -1720,6 +1740,88 @@ static void handle_pdu_group_disable_list(pdu_group_info_t *pdu_group_info)
 	}
 }
 
+static uint8_t get_channel_active_power_module_item_count(channel_info_t *channel_info)
+{
+	uint8_t module_count = 0;
+	struct list_head *head;
+	power_module_group_info_t *power_module_group_info;
+
+	head = &channel_info->power_module_group_list;
+	list_for_each_entry(power_module_group_info, head, power_module_group_info_t, list) {
+		struct list_head *head = &power_module_group_info->power_module_item_list;
+		power_module_item_info_t *power_module_item_info;
+		list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
+			if(power_module_item_info->status.state == POWER_MODULE_ITEM_STATE_DISABLE) {
+				continue;
+			}
+		}
+		module_count++;
+	}
+
+	return module_count;
+}
+
+static void handle_channels_max_power_limit(channels_info_t *channels_info)
+{
+	int i;
+	channels_settings_t *channels_settings = &channels_info->channels_settings;
+	uint32_t channels_max_output_power_left = channels_settings->channels_max_output_power * 100;
+
+	for(i = 0; i < channels_info->pdu_group_number; i++) {
+		pdu_group_info_t *pdu_group_info = channels_info->pdu_group_info + i;
+		struct list_head *head;
+		channel_info_t *channel_info;
+
+		head = &pdu_group_info->channel_active_list;
+		list_for_each_entry(channel_info, head, channel_info_t, list) {
+			uint16_t charge_output_voltage = channel_info->status.charge_output_voltage;
+			uint16_t charge_output_current = channel_info->status.charge_output_current;
+			uint32_t charge_output_power = charge_output_voltage * charge_output_current;
+			uint16_t require_output_voltage = channel_info->status.require_output_voltage;
+			uint16_t require_output_current = channel_info->status.require_output_current;
+			uint32_t require_output_power;
+			uint8_t module_count = get_channel_active_power_module_item_count(channel_info);
+			uint16_t module_require_current = (module_count != 0) ? (require_output_current / module_count) : 0;
+			uint32_t channel_max_output_power;
+
+			module_voltage_current_correction(channels_settings, &require_output_voltage, &module_require_current);
+			module_power_limit_correction(channels_settings, &charge_output_voltage, &module_require_current);
+			require_output_power = require_output_voltage * (module_require_current * module_count);
+			//debug("channel %d channels_max_output_power_left:%d",
+			//      channel_info->channel_id,
+			//      channels_max_output_power_left);
+
+			//debug("channel %d charge_output_voltage:%d, charge_output_current:%d",
+			//      channel_info->channel_id,
+			//      charge_output_voltage,
+			//      charge_output_current);
+
+			//debug("channel %d require_output_power:%d, charge_output_power:%d",
+			//      channel_info->channel_id,
+			//      require_output_power,
+			//      charge_output_power);
+
+			if(require_output_power > charge_output_power) {
+				channel_max_output_power = require_output_power;
+			} else {
+				channel_max_output_power = charge_output_power;
+			}
+
+			if(channels_max_output_power_left >= channel_max_output_power) {
+				channel_info->channel_max_output_power = channel_max_output_power / 100;
+				channels_max_output_power_left -= channel_max_output_power;
+			} else {//已经超过配额
+				channel_info->channel_max_output_power = channels_max_output_power_left / 100;
+				channels_max_output_power_left -= channels_max_output_power_left;
+			}
+
+			//debug("channel %d channel_max_output_power:%d",
+			//      channel_info->channel_id,
+			//      channel_info->channel_max_output_power);
+		}
+	}
+}
+
 char *get_power_module_item_state_des(power_module_item_state_t state)
 {
 	char *des = "unknow";
@@ -1983,7 +2085,7 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 				uint16_t current = 1;
 
 				module_voltage_current_correction(channels_settings, &voltage, &current);
-				module_power_limit_correction(channels_settings, &channel_info->status.charge_output_voltage, &current);
+				//module_power_limit_correction(channels_settings, &channel_info->status.charge_output_voltage, &current);
 				power_module_item_set_out_voltage_current(power_module_item_info, voltage, current);
 
 				//debug("module_id %d setting voltage:%d, current:%d",
@@ -2364,33 +2466,71 @@ static void handle_channels_fault(channels_info_t *channels_info)
 
 	fault = 0;
 
-	for(i = 0; i < channels_info->power_module_item_number; i++) {
-		power_module_item_info_t *power_module_item_info = channels_info->power_module_item_info + i;
+	for(i = 0; i < channels_info->channel_number; i++) {
+		channel_info_t *channel_info = channels_info->channel_info + i;
+		power_module_group_info_t *power_module_group_info;
+		struct list_head *head;
+		struct list_head *head1;
 
-		if(power_module_item_info->status.state == POWER_MODULE_ITEM_STATE_DISABLE) {
-			continue;
-		}
+		fault = 0;
+		head = &channel_info->power_module_group_list;
+		list_for_each_entry(power_module_group_info, head, power_module_group_info_t, list) {
+			head1 = &power_module_group_info->power_module_item_list;
+			power_module_item_info_t *power_module_item_info;
+			uint8_t module_group_size = list_size(head1);
+			uint8_t power_module_disble_count = 0;
+			list_for_each_entry(power_module_item_info, head1, power_module_item_info_t, list) {
+				if(power_module_item_info->status.state == POWER_MODULE_ITEM_STATE_DISABLE) {
+					power_module_disble_count++;
+					continue;
+				}
 
-		if(get_first_fault(power_module_item_info->faults) != -1) {
-			fault = 1;
-			break;
+				if(get_first_fault(power_module_item_info->faults) != -1) {
+					fault = 1;
+					break;
+				}
+			}
+
+			if(power_module_disble_count == module_group_size) {
+				fault = 1;
+			}
+
+			if(fault == 1) {
+				break;
+			}
 		}
+		set_fault(channel_info->faults, CHANNEL_FAULT_POWER_MODULE, fault);
 	}
-
-	set_fault(channels_info->faults, CHANNELS_FAULT_POWER_MODULE, fault);
-
-	fault = 0;
 
 	for(i = 0; i < channels_info->channel_number; i++) {
 		channel_info_t *channel_info = channels_info->channel_info + i;
+		pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
+
+		fault = 0;
+
+		if(channel_info->status.state == CHANNEL_STATE_IDLE) {
+			continue;
+		}
+
+		if(get_first_fault(channels_info->faults) != -1) {
+			debug("channels fault!");
+			fault = 1;
+		}
+
+		//if(get_first_fault(pdu_group_info->faults) != -1) {
+		//	debug("pdu_group fault!");
+		//	fault = 1;
+		//}
 
 		if(get_first_fault(channel_info->faults) != -1) {
+			debug("channel %d fault!", channel_info->channel_id);
 			fault = 1;
-			break;
+		}
+
+		if(fault != 0) {
+			try_to_stop_channel(channel_info);
 		}
 	}
-
-	set_fault(channels_info->faults, CHANNELS_FAULT_CHANNEL, fault);
 }
 
 static void channels_process_event(channels_info_t *channels_info)
@@ -2504,6 +2644,8 @@ static void handle_common_periodic(void *fn_ctx, void *chain_ctx)
 		handle_pdu_group_deactive_list(pdu_group_info);
 		handle_pdu_group_disable_list(pdu_group_info);
 	}
+
+	handle_channels_max_power_limit(channels_info);
 
 	handle_power_module_items_info_state(channels_info);
 
@@ -2676,6 +2818,7 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	//分配pdu组信息
 	channels_info->pdu_group_info = (pdu_group_info_t *)os_calloc(channels_info->pdu_group_number, sizeof(pdu_group_info_t));
 	OS_ASSERT(channels_info->pdu_group_info != NULL);
+	//channels_info->pdu_group_info->faults = alloc_bitmap(PDU_GROUP_FAULT_SIZE);
 
 	//分配模块组信息
 	channels_info->power_module_group_info = (power_module_group_info_t *)os_calloc(channels_info->power_module_group_number, sizeof(power_module_group_info_t));

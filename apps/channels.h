@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年09月18日 星期六 12时46分03秒
+ *   修改日期：2021年10月18日 星期一 21时24分43秒
  *   描    述：
  *
  *================================================================*/
@@ -44,6 +44,10 @@ typedef enum {
 	CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG_SYNC,
 } channels_change_state_t;
 
+typedef enum {
+	PDU_GROUP_FAULT_SIZE,
+} pdu_group_fault_t;
+
 typedef struct {
 	uint8_t pdu_group_id;
 
@@ -62,6 +66,8 @@ typedef struct {
 	channels_change_state_t channels_change_state;//通道切换状态
 
 	bitmap_t *relay_map;//链式搭接开关状态位
+	
+	//bitmap_t *faults;//pdu_group_fault_t
 
 	void *channels_info;
 } pdu_group_info_t;//pdu分组信息
@@ -141,7 +147,8 @@ typedef struct {
 typedef enum {
 	CHANNEL_FAULT_FAULT = 0,
 	CHANNEL_FAULT_CONNECT_TIMEOUT,
-	CHANNEL_FAULT_OVER_TEMPERATURE,
+	CHANNEL_FAULT_POWER_MODULE,
+	CHANNEL_FAULT_RELAY_BOARD_OVER_TEMPERATURE,
 	CHANNEL_FAULT_SIZE,
 } channel_fault_t;
 
@@ -157,6 +164,7 @@ typedef struct {
 	uint32_t channel_state_change_stamp;
 	struct list_head power_module_group_list;//关联的电源模块组
 	bitmap_t *faults;//channel_fault_t
+	uint32_t channel_max_output_power;
 } channel_info_t;
 
 typedef enum {
@@ -220,7 +228,7 @@ typedef struct {
 	int group_id;
 	pdu_group_info_t *pdu_group_info;//pdu分组信息
 	void *channel_info;
-	struct list_head power_module_item_list;//电源模块列表
+	struct list_head power_module_item_list;//电源模块空闲列表
 } power_module_group_info_t;
 
 #pragma pack(push, 1)
@@ -236,16 +244,13 @@ typedef struct {
 	uint16_t module_max_output_current;//最大输出电流 0.1a
 	uint16_t module_min_output_current;//最小输出电流 0.1a
 	uint16_t module_max_output_power;//单模块最大功率 w
+	uint32_t channels_max_output_power;//柜体最大功率 w
 } channels_settings_t;
 
 #pragma pack(pop)
 
 typedef enum {
-	CHANNELS_FAULT_CHANNEL = 0,
-	CHANNELS_FAULT_POWER_MODULE,
-	CHANNELS_FAULT_RELAY_BOARD,
-	CHANNELS_FAULT_RELAY_CHECK,
-	CHANNELS_FAULT_FORCE_STOP,
+	CHANNELS_FAULT_FORCE_STOP = 0,
 	CHANNELS_FAULT_DOOR,
 	CHANNELS_FAULT_DISPLAY,
 	CHANNELS_FAULT_SIZE,
