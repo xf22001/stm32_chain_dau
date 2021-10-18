@@ -6,7 +6,7 @@
  *   文件名称：channels_communication.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月25日 星期一 14时24分07秒
- :   修改日期：2021年10月15日 星期五 12时12分20秒
+ :   修改日期：2021年10月18日 星期一 17时26分43秒
  *   描    述：
  *
  *================================================================*/
@@ -21,7 +21,7 @@
 #include "can_data_task.h"
 #include "power_modules.h"
 
-#define LOG_DISABLE
+//#define LOG_DISABLE
 #include "log.h"
 
 typedef struct {
