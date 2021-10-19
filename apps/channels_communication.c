@@ -6,7 +6,7 @@
  *   文件名称：channels_communication.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月25日 星期一 14时24分07秒
- :   修改日期：2021年10月15日 星期五 12时12分20秒
+ :   修改日期：2021年10月19日 星期二 10时46分08秒
  *   描    述：
  *
  *================================================================*/
@@ -885,6 +885,10 @@ static void channels_com_request_periodic(channels_com_info_t *channels_com_info
 
 			if(get_fault(channel_info->faults, CHANNEL_FAULT_CONNECT_TIMEOUT) != connect_timeout) {
 				set_fault(channel_info->faults, CHANNEL_FAULT_CONNECT_TIMEOUT, connect_timeout);
+
+				if(connect_timeout != 0) {
+					debug("");
+				}
 
 				if(connect_timeout != 0) {
 					debug("cmd %d(%s), index %d, channel %d timeout, ticks:%d, update stamp:%d",

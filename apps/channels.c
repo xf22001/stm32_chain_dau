@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月18日 星期一 21时25分41秒
+ *   修改日期：2021年10月19日 星期二 11时32分16秒
  *   描    述：
  *
  *================================================================*/
@@ -333,17 +333,21 @@ static void default_handle_channel_event(void *_channel_info, void *_channels_ev
 		return;
 	}
 
-	debug("channel_id %d process event %s!", channel_info->channel_id, get_channel_event_type_des(channel_event->type));
-
 	switch(channel_event->type) {
 		case CHANNEL_EVENT_TYPE_START_CHANNEL: {
+			debug("channel_id %d process event %s!", channel_info->channel_id, get_channel_event_type_des(channel_event->type));
+
 			if(try_to_start_channel(channel_info) != 0) {
 			}
 		}
 		break;
 
 		case CHANNEL_EVENT_TYPE_STOP_CHANNEL: {
-			if(try_to_stop_channel(channel_info) != 0) {
+			if(channel_info->status.state != CHANNEL_STATE_IDLE) {
+				debug("channel_id %d process event %s!", channel_info->channel_id, get_channel_event_type_des(channel_event->type));
+
+				if(try_to_stop_channel(channel_info) != 0) {
+				}
 			}
 		}
 		break;
@@ -1754,8 +1758,9 @@ static uint8_t get_channel_active_power_module_item_count(channel_info_t *channe
 			if(power_module_item_info->status.state == POWER_MODULE_ITEM_STATE_DISABLE) {
 				continue;
 			}
+
+			module_count++;
 		}
-		module_count++;
 	}
 
 	return module_count;
@@ -1787,9 +1792,15 @@ static void handle_channels_max_power_limit(channels_info_t *channels_info)
 			module_voltage_current_correction(channels_settings, &require_output_voltage, &module_require_current);
 			module_power_limit_correction(channels_settings, &charge_output_voltage, &module_require_current);
 			require_output_power = require_output_voltage * (module_require_current * module_count);
+
 			//debug("channel %d channels_max_output_power_left:%d",
 			//      channel_info->channel_id,
 			//      channels_max_output_power_left);
+
+			//debug("channel %d module_require_current:%d, module_count:%d",
+			//      channel_info->channel_id,
+			//      module_require_current,
+			//      module_count);
 
 			//debug("channel %d charge_output_voltage:%d, charge_output_current:%d",
 			//      channel_info->channel_id,
@@ -1885,6 +1896,11 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 
 	if(get_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_FAULT) != u_power_module_status.s.fault) {
 		set_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_FAULT, u_power_module_status.s.fault);
+
+		if(u_power_module_status.s.fault != 0) {
+			debug("");
+		}
+
 		fault_changed = 1;
 	}
 
@@ -1900,6 +1916,11 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 
 	if(get_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT) != connect_timeout) {
 		set_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT, connect_timeout);
+
+		if(connect_timeout != 0) {
+			debug("");
+		}
+
 		fault_changed = 1;
 	}
 
@@ -1915,11 +1936,21 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 
 	if(get_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_INPUT_LOW_VOLTAGE) != low_voltage) {
 		set_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_INPUT_LOW_VOLTAGE, low_voltage);
+
+		if(low_voltage != 0) {
+			debug("");
+		}
+
 		fault_changed = 1;
 	}
 
 	if(get_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_INPUT_OVER_VOLTAGE) != over_voltage) {
 		set_fault(power_module_item_info->faults, POWER_MODULE_ITEM_FAULT_INPUT_OVER_VOLTAGE, over_voltage);
+
+		if(over_voltage != 0) {
+			debug("");
+		}
+
 		fault_changed = 1;
 	}
 
@@ -1941,9 +1972,11 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 			struct list_head *head = &power_module_group_info->power_module_item_list;
 
 			if(channel_info != NULL) {
-				debug("channel_id %d stop by module_id %d fault",
-				      channel_info->channel_id, power_module_item_info->module_id);
-				try_to_stop_channel(channel_info);
+				if(channel_info->status.state != CHANNEL_STATE_IDLE) {
+					debug("channel_id %d stop by module_id %d fault",
+					      channel_info->channel_id, power_module_item_info->module_id);
+					try_to_stop_channel(channel_info);
+				}
 			}
 
 			list_for_each_entry(power_module_item_info_deactive, head, power_module_item_info_t, list) {
@@ -2500,11 +2533,15 @@ static void handle_channels_fault(channels_info_t *channels_info)
 			}
 		}
 		set_fault(channel_info->faults, CHANNEL_FAULT_POWER_MODULE, fault);
+
+		if(fault != 0) {
+			debug("");
+		}
 	}
 
 	for(i = 0; i < channels_info->channel_number; i++) {
 		channel_info_t *channel_info = channels_info->channel_info + i;
-		pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
+		//pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
 
 		fault = 0;
 
@@ -2528,7 +2565,9 @@ static void handle_channels_fault(channels_info_t *channels_info)
 		}
 
 		if(fault != 0) {
-			try_to_stop_channel(channel_info);
+			if(channel_info->status.state != CHANNEL_STATE_IDLE) {
+				try_to_stop_channel(channel_info);
+			}
 		}
 	}
 }
@@ -2579,10 +2618,18 @@ static void handle_gpio_signal(channels_info_t *channels_info)
 
 	if(get_fault(channels_info->faults, CHANNELS_FAULT_FORCE_STOP) != force_stop) {
 		set_fault(channels_info->faults, CHANNELS_FAULT_FORCE_STOP, force_stop);
+
+		if(force_stop != 0) {
+			debug("");
+		}
 	}
 
 	if(get_fault(channels_info->faults, CHANNELS_FAULT_DOOR) != door) {
 		set_fault(channels_info->faults, CHANNELS_FAULT_DOOR, door);
+
+		if(door != 0) {
+			debug("");
+		}
 	}
 }
 
@@ -2625,8 +2672,10 @@ static void handle_channels_ntc_signal(channels_info_t *channels_info)
 			set_fault(channel_info_item->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT, over_temperature);
 
 			if(over_temperature == 1) {
-				debug("channel_id %d stop by ntc over_temperature fault", channel_info_item->channel_id);
-				try_to_stop_channel(channel_info_item);
+				if(channel_info_item->status.state != CHANNEL_STATE_IDLE) {
+					debug("channel_id %d stop by ntc over_temperature fault", channel_info_item->channel_id);
+					try_to_stop_channel(channel_info_item);
+				}
 			}
 		}
 	}
