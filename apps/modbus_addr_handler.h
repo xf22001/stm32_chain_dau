@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.h
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时11分10秒
- *   修改日期：2021年10月15日 星期五 15时27分06秒
+ *   修改日期：2021年10月20日 星期三 16时59分02秒
  *   描    述：
  *
  *================================================================*/
@@ -147,6 +147,8 @@ typedef enum {
 
 	MODBUS_ADDR_PDU_GROUP1_POWER_MODULE_NUMBER_PER_POWER_MODULE_GROUP,
 	MODBUS_ADDR_PDU_GROUP2_POWER_MODULE_NUMBER_PER_POWER_MODULE_GROUP,
+	MODBUS_ADDR_PDU_GROUP_FAULT,
+	MODBUS_ADDR_RELAY_FAULT_ID,
 
 	MODBUS_ADDR_SIZE = addr_current_max,
 } modbus_slave_addr_t;

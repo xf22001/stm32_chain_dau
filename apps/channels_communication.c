@@ -6,7 +6,7 @@
  *   文件名称：channels_communication.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月25日 星期一 14时24分07秒
- :   修改日期：2021年10月19日 星期二 10时46分08秒
+ :   修改日期：2021年10月20日 星期三 17时16分50秒
  *   描    述：
  *
  *================================================================*/
@@ -543,16 +543,20 @@ static uint8_t pdu_channels_idle(channels_info_t *channels_info)
 	return ret;
 }
 
-static uint8_t pdu_fault(channels_info_t *channels_info)
+static uint8_t pdu_fault(channel_info_t *channel_info)
 {
 	uint8_t fault = 0;
-	int i;
+	pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
+	channels_info_t *channels_info = (channels_info_t *)channel_info->channels_info;
 
-	for(i = 0; i < CHANNELS_FAULT_SIZE; i++) {
-		if(get_fault(channels_info->faults, i) != 0) {
-			fault = 1;
-			break;
-		}
+	if(get_first_fault(channels_info->faults) != -1) {
+		debug("");
+		fault = 1;
+	}
+
+	if(get_first_fault(pdu_group_info->faults) != -1) {
+		debug("");
+		fault = 1;
 	}
 
 	return fault;
@@ -567,13 +571,14 @@ static int request_pdu_status(channels_com_info_t *channels_com_info)
 	command_status_t *cmd_ctx = channels_com_info->cmd_ctx + cmd_ctx_index;
 	cmd_request_pdu_status_t *cmd_request = (cmd_request_pdu_status_t *)channels_com_info->can_tx_msg.Data;
 	channels_info_t *channels_info = channels_com_info->channels_info;
+	channel_info_t *channel_info = channels_info->channel_info + channel_id;
 
 	if(channel_id >= channel_number) {
 		return ret;
 	}
 
 	cmd_request->cmd = CHANNEL_CMD_CODE_PDU_STATUS;
-	cmd_request->fault_stop = pdu_fault(channels_info);
+	cmd_request->fault_stop = pdu_fault(channel_info);
 	cmd_request->pdu_idle = pdu_channels_idle(channels_info);
 
 	cmd_ctx->state = COMMAND_STATE_RESPONSE;
@@ -885,10 +890,6 @@ static void channels_com_request_periodic(channels_com_info_t *channels_com_info
 
 			if(get_fault(channel_info->faults, CHANNEL_FAULT_CONNECT_TIMEOUT) != connect_timeout) {
 				set_fault(channel_info->faults, CHANNEL_FAULT_CONNECT_TIMEOUT, connect_timeout);
-
-				if(connect_timeout != 0) {
-					debug("");
-				}
 
 				if(connect_timeout != 0) {
 					debug("cmd %d(%s), index %d, channel %d timeout, ticks:%d, update stamp:%d",

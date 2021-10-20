@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月19日 星期二 11时32分16秒
+ *   修改日期：2021年10月20日 星期三 17时28分38秒
  *   描    述：
  *
  *================================================================*/
@@ -146,6 +146,7 @@ char *get_power_module_policy_des(power_module_policy_t policy)
 	char *des = "unknow";
 
 	switch(policy) {
+			add_des_case(POWER_MODULE_POLICY_AVERAGE);
 			add_des_case(POWER_MODULE_POLICY_PRIORITY);
 
 		default: {
@@ -254,6 +255,10 @@ static int try_to_start_channel(channel_info_t *channel_info)
 {
 	int ret = -1;
 
+	if(channel_info->channel_request_state == CHANNEL_REQUEST_STATE_START) {
+		return ret;
+	}
+
 	channel_info->channel_request_state = CHANNEL_REQUEST_STATE_START;
 
 	switch(channel_info->status.state) {
@@ -291,6 +296,10 @@ static int try_to_start_channel(channel_info_t *channel_info)
 static int try_to_stop_channel(channel_info_t *channel_info)
 {
 	int ret = -1;
+
+	if(channel_info->channel_request_state == CHANNEL_REQUEST_STATE_STOP) {
+		return ret;
+	}
 
 	channel_info->channel_request_state = CHANNEL_REQUEST_STATE_STOP;
 
@@ -1562,6 +1571,7 @@ static int sync_relay_map(pdu_group_info_t *pdu_group_info)
 
 		if(state != expect_state) {
 			debug("relay %d relay state %d, except state %d", relay_node_info->relay_id, state, expect_state);
+			pdu_group_info->relay_fault_id = relay_node_info->relay_id;
 			ret = -1;
 			break;
 		}
@@ -1575,6 +1585,14 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 {
 	switch(pdu_group_info->channels_change_state) {
 		case CHANNELS_CHANGE_STATE_IDLE: {
+			uint8_t fault = 0;
+
+			if(sync_relay_map(pdu_group_info) != 0) {
+				debug("");
+				fault = 1;
+			}
+
+			set_fault(pdu_group_info->faults, PDU_GROUP_RELAY_FAULT, fault);
 		}
 		break;
 
@@ -1610,10 +1628,16 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
 			      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			pdu_group_info->channels_change_state_stamps = osKernelSysTick();
 		}
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG_SYNC: {//释放模块组后配置同步
+			if(ticks_duration(osKernelSysTick(), pdu_group_info->channels_change_state_stamps) >= 5000) {
+				debug("");
+				set_fault(pdu_group_info->faults, PDU_GROUP_RELAY_FAULT, 1);
+			}
+
 			if(sync_relay_map(pdu_group_info) == 0) {
 				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN;
 				debug("pdu_group_id %d channels_change_state to state %s",
@@ -1652,10 +1676,16 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
 			      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			pdu_group_info->channels_change_state_stamps = osKernelSysTick();
 		}
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG_SYNC: {//分配模块组后同步配置
+			if(ticks_duration(osKernelSysTick(), pdu_group_info->channels_change_state_stamps) >= 5000) {
+				debug("");
+				set_fault(pdu_group_info->faults, PDU_GROUP_RELAY_FAULT, 1);
+			}
+
 			if(sync_relay_map(pdu_group_info) == 0) {
 				channels_module_assign_ready(pdu_group_info);
 				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_IDLE;
@@ -2333,6 +2363,7 @@ static void handle_power_module_policy_request(channels_info_t *channels_info)
 
 			update_power_module_policy_request = 0;
 			pdu_config->policy = power_module_policy_value;
+			pdu_config->policy = POWER_MODULE_POLICY_PRIORITY;//xiaofei
 
 			debug("set policy %s", get_power_module_policy_des(pdu_config->policy));
 		}
@@ -2541,7 +2572,7 @@ static void handle_channels_fault(channels_info_t *channels_info)
 
 	for(i = 0; i < channels_info->channel_number; i++) {
 		channel_info_t *channel_info = channels_info->channel_info + i;
-		//pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
+		pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
 
 		fault = 0;
 
@@ -2554,10 +2585,10 @@ static void handle_channels_fault(channels_info_t *channels_info)
 			fault = 1;
 		}
 
-		//if(get_first_fault(pdu_group_info->faults) != -1) {
-		//	debug("pdu_group fault!");
-		//	fault = 1;
-		//}
+		if(get_first_fault(pdu_group_info->faults) != -1) {
+			debug("pdu_group fault!");
+			fault = 1;
+		}
 
 		if(get_first_fault(channel_info->faults) != -1) {
 			debug("channel %d fault!", channel_info->channel_id);
@@ -2668,8 +2699,8 @@ static void handle_channels_ntc_signal(channels_info_t *channels_info)
 			over_temperature = 1;
 		}
 
-		if(get_fault(channel_info_item->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT) != over_temperature) {
-			set_fault(channel_info_item->faults, POWER_MODULE_ITEM_FAULT_CONNECT_TIMEOUT, over_temperature);
+		if(get_fault(channel_info_item->faults, CHANNEL_FAULT_RELAY_BOARD_OVER_TEMPERATURE) != over_temperature) {
+			set_fault(channel_info_item->faults, CHANNEL_FAULT_RELAY_BOARD_OVER_TEMPERATURE, over_temperature);
 
 			if(over_temperature == 1) {
 				if(channel_info_item->status.state != CHANNEL_STATE_IDLE) {
@@ -2867,7 +2898,7 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	//分配pdu组信息
 	channels_info->pdu_group_info = (pdu_group_info_t *)os_calloc(channels_info->pdu_group_number, sizeof(pdu_group_info_t));
 	OS_ASSERT(channels_info->pdu_group_info != NULL);
-	//channels_info->pdu_group_info->faults = alloc_bitmap(PDU_GROUP_FAULT_SIZE);
+	channels_info->pdu_group_info->faults = alloc_bitmap(PDU_GROUP_FAULT_SIZE);
 
 	//分配模块组信息
 	channels_info->power_module_group_info = (power_module_group_info_t *)os_calloc(channels_info->power_module_group_number, sizeof(power_module_group_info_t));
@@ -3011,17 +3042,17 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	OS_ASSERT(register_callback(display_info->modbus_slave_info->data_changed_chain, &channels_info->display_data_changed_callback_item) == 0);
 
 	{
-		int i;
+		//int i;
 
 		debug("modbus addr max:%d!", MODBUS_ADDR_SIZE - 1);
 
-		for(i = 0; i < MODBUS_ADDR_SIZE; i++) {
-			modbus_data_ctx_t modbus_data_ctx;
-			modbus_data_ctx.ctx = NULL;
-			modbus_data_ctx.action = MODBUS_DATA_ACTION_GET;
-			modbus_data_ctx.addr = i;
-			channels_modbus_data_action(channels_info, &modbus_data_ctx);
-		}
+		//for(i = 0; i < MODBUS_ADDR_SIZE; i++) {
+		//	modbus_data_ctx_t modbus_data_ctx;
+		//	modbus_data_ctx.ctx = NULL;
+		//	modbus_data_ctx.action = MODBUS_DATA_ACTION_GET;
+		//	modbus_data_ctx.addr = i;
+		//	channels_modbus_data_action(channels_info, &modbus_data_ctx);
+		//}
 	}
 
 	osThreadCreate(osThread(task_channels), channels_info);

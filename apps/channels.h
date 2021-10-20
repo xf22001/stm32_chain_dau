@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年10月18日 星期一 21时24分43秒
+ *   修改日期：2021年10月20日 星期三 16时18分26秒
  *   描    述：
  *
  *================================================================*/
@@ -45,6 +45,7 @@ typedef enum {
 } channels_change_state_t;
 
 typedef enum {
+	PDU_GROUP_RELAY_FAULT = 0,
 	PDU_GROUP_FAULT_SIZE,
 } pdu_group_fault_t;
 
@@ -64,10 +65,12 @@ typedef struct {
 	struct list_head power_module_group_disable_list;//电源模块组禁用列表
 
 	channels_change_state_t channels_change_state;//通道切换状态
+	uint32_t channels_change_state_stamps;
 
 	bitmap_t *relay_map;//链式搭接开关状态位
+	uint8_t relay_fault_id;
 	
-	//bitmap_t *faults;//pdu_group_fault_t
+	bitmap_t *faults;//pdu_group_fault_t
 
 	void *channels_info;
 } pdu_group_info_t;//pdu分组信息
