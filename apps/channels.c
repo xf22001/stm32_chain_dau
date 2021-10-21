@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月20日 星期三 17时28分38秒
+ *   修改日期：2021年10月21日 星期四 16时18分33秒
  *   描    述：
  *
  *================================================================*/
@@ -637,7 +637,7 @@ static void handle_power_module_group_info(channel_info_t *channel_info, uint16_
 
 		if((module_require_current == 0) && (channel_info->status.require_output_current != 0)) {
 			module_require_current = channels_settings->module_min_output_current;
-			debug("module_require_current:%d", module_require_current);
+			//debug("module_require_current:%d", module_require_current);
 		}
 
 		module_voltage_current_correction(channels_settings, &module_require_voltage, &module_require_current);
@@ -997,6 +997,38 @@ static void free_power_module_group_for_stop_channel(pdu_group_info_t *pdu_group
 	}
 }
 
+static int pdu_group_channel_relay_fb_sync(pdu_group_info_t *pdu_group_info)
+{
+	int ret = 0;
+	channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
+	channels_config_t *channels_config = channels_info->channels_config;
+	int i;
+	channel_relay_fb_node_info_t *channel_relay_fb_node_info;
+
+	for(i = 0; i < channels_info->channel_number; i++) {
+		channel_info_t *channel_info = channels_info->channel_info + i;
+
+		if(channel_info->pdu_group_info->pdu_group_id != pdu_group_info->pdu_group_id) {
+			continue;
+		}
+
+		if(list_contain(&channel_info->list, &pdu_group_info->channel_active_list) == 0) {
+			continue;
+		}
+
+		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info->channel_id);
+		OS_ASSERT(channel_relay_fb_node_info != NULL);
+
+		if(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
+			ret = -1;
+			break;
+		}
+	}
+
+	return ret;
+}
+
 static void channel_info_deactive_unneeded_power_module_group_priority(channel_info_t *channel_info)//POWER_MODULE_POLICY_PRIORITY
 {
 	struct list_head *pos;
@@ -1010,7 +1042,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 	channel_info_t *channel_info_item_prev;
 	power_module_group_info_t *power_module_group_info_item;
 	uint8_t assigned;
-	channel_relay_fb_node_info_t *channel_relay_fb_node_info;
+	//channel_relay_fb_node_info_t *channel_relay_fb_node_info;
 
 	head = &channel_info->power_module_group_list;
 
@@ -1065,12 +1097,12 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 			break;
 		}
 
-		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
-		OS_ASSERT(channel_relay_fb_node_info != NULL);
+		//channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		//OS_ASSERT(channel_relay_fb_node_info != NULL);
 
-		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
-		}
+		//while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+		//	debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
+		//}
 
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
@@ -1126,12 +1158,12 @@ static void channel_info_deactive_unneeded_power_module_group_priority(channel_i
 			break;
 		}
 
-		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
-		OS_ASSERT(channel_relay_fb_node_info != NULL);
+		//channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		//OS_ASSERT(channel_relay_fb_node_info != NULL);
 
-		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
-		}
+		//while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+		//	debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
+		//}
 
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
@@ -1219,7 +1251,7 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 	channel_info_t *channel_info_item_prev;
 	power_module_group_info_t *power_module_group_info_item;
 	uint8_t assigned;
-	channel_relay_fb_node_info_t *channel_relay_fb_node_info;
+	//channel_relay_fb_node_info_t *channel_relay_fb_node_info;
 
 	power_module_group_info_item = channels_info->power_module_group_info + channel_info->channel_id;
 
@@ -1271,12 +1303,12 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			break;
 		}
 
-		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
-		OS_ASSERT(channel_relay_fb_node_info != NULL);
+		//channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		//OS_ASSERT(channel_relay_fb_node_info != NULL);
 
-		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
-		}
+		//while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+		//	debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
+		//}
 
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
@@ -1353,12 +1385,12 @@ static void channel_info_assign_power_module_group(channel_info_t *channel_info)
 			break;
 		}
 
-		channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
-		OS_ASSERT(channel_relay_fb_node_info != NULL);
+		//channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, pdu_group_info->pdu_group_id, channel_info_item->channel_id);
+		//OS_ASSERT(channel_relay_fb_node_info != NULL);
 
-		while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
-		}
+		//while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+		//	debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
+		//}
 
 		next_power_module_group_id = next_channel_id;
 		power_module_group_info_item = channels_info->power_module_group_info + next_power_module_group_id;
@@ -1597,17 +1629,18 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_PREPARE_FREE: {//准备释放模块组
-			channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
-			pdu_config_t *pdu_config = &channels_info->channels_settings.pdu_config;
-			pdu_group_info_power_module_group_policy_t *policy = get_pdu_group_info_power_module_group_policy(pdu_config->policy);
+			if(pdu_group_channel_relay_fb_sync(pdu_group_info) == 0) {
+				channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
+				pdu_config_t *pdu_config = &channels_info->channels_settings.pdu_config;
+				pdu_group_info_power_module_group_policy_t *policy = get_pdu_group_info_power_module_group_policy(pdu_config->policy);
+				debug("pdu_group_id %d get policy %s", pdu_group_info->pdu_group_id, get_power_module_policy_des(pdu_config->policy));
 
-			debug("pdu_group_id %d get policy %s", pdu_group_info->pdu_group_id, get_power_module_policy_des(pdu_config->policy));
-
-			if(policy->free(pdu_group_info) == 0) {//返回0表示释放操作完成
-				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_FREE;
-				debug("pdu_group_id %d channels_change_state to state %s",
-				      pdu_group_info->pdu_group_id,
-				      get_channels_change_state_des(pdu_group_info->channels_change_state));
+				if(policy->free(pdu_group_info) == 0) {//返回0表示释放操作完成
+					pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_FREE;
+					debug("pdu_group_id %d channels_change_state to state %s",
+					      pdu_group_info->pdu_group_id,
+					      get_channels_change_state_des(pdu_group_info->channels_change_state));
+				}
 			}
 		}
 		break;
@@ -1652,11 +1685,13 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 			pdu_config_t *pdu_config = &channels_info->channels_settings.pdu_config;
 			pdu_group_info_power_module_group_policy_t *policy = get_pdu_group_info_power_module_group_policy(pdu_config->policy);
 
-			policy->assign(pdu_group_info);
-			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_READY_SYNC;
-			debug("pdu_group_id %d channels_change_state to state %s",
-			      pdu_group_info->pdu_group_id,
-			      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			if(pdu_group_channel_relay_fb_sync(pdu_group_info) == 0) {
+				policy->assign(pdu_group_info);
+				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_READY_SYNC;
+				debug("pdu_group_id %d channels_change_state to state %s",
+				      pdu_group_info->pdu_group_id,
+				      get_channels_change_state_des(pdu_group_info->channels_change_state));
+			}
 		}
 		break;
 
@@ -2334,6 +2369,7 @@ static uint8_t power_module_policy_value = POWER_MODULE_POLICY_PRIORITY;
 void set_power_module_policy_request(power_module_policy_t policy)
 {
 	update_power_module_policy_request = 1;
+	policy = POWER_MODULE_POLICY_PRIORITY;
 	power_module_policy_value = policy;
 }
 

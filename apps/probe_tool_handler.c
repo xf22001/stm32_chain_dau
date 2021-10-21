@@ -6,7 +6,7 @@
  *   文件名称：probe_tool_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年03月20日 星期五 12时48分07秒
- *   修改日期：2021年08月27日 星期五 10时37分46秒
+ *   修改日期：2021年10月21日 星期四 10时22分41秒
  *   描    述：
  *
  *================================================================*/
@@ -379,6 +379,23 @@ static void fn11(request_t *request)
 	      modbus_data_ctx.value);
 }
 
+static void fn17(request_t *request)
+{
+	char *content = (char *)(request + 1);
+	int fn;
+	int catched;
+	int ret;
+
+	ret = sscanf(content, "%d %n", &fn, &catched);
+
+	if(ret == 1) {
+		app_set_reset_config();
+		app_save_config();
+		debug("reset config ...");
+		HAL_NVIC_SystemReset();
+	}
+}
+
 static server_item_t server_map[] = {
 	{1, fn1},
 	{2, fn2},
@@ -391,6 +408,7 @@ static server_item_t server_map[] = {
 	{9, fn9},
 	{10, fn10},
 	{11, fn11},
+	{17, fn17},
 };
 
 server_map_info_t server_map_info = {

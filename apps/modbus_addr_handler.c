@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时13分49秒
- *   修改日期：2021年10月20日 星期三 17时09分08秒
+ *   修改日期：2021年10月21日 星期四 10时04分24秒
  *   描    述：
  *
  *================================================================*/
@@ -897,6 +897,11 @@ void channels_modbus_data_action(void *fn_ctx, void *chain_ctx)
 
 		case MODBUS_ADDR_VER_MINOR: {
 			modbus_data_value_r(modbus_data_ctx, VER_MINOR);
+		}
+		break;
+
+		case MODBUS_ADDR_VER_REV: {
+			modbus_data_value_r(modbus_data_ctx, VER_REV);
 		}
 		break;
 
