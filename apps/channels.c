@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月21日 星期四 16时18分33秒
+ *   修改日期：2021年10月21日 星期四 21时53分26秒
  *   描    述：
  *
  *================================================================*/
@@ -997,7 +997,7 @@ static void free_power_module_group_for_stop_channel(pdu_group_info_t *pdu_group
 	}
 }
 
-static int pdu_group_channel_relay_fb_sync(pdu_group_info_t *pdu_group_info)
+static int check_channel_relay_fb_sync(pdu_group_info_t *pdu_group_info)
 {
 	int ret = 0;
 	channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
@@ -1565,7 +1565,7 @@ static pdu_group_info_power_module_group_policy_t *get_pdu_group_info_power_modu
 	return pdu_group_info_power_module_group_policy;
 }
 
-static void relay_map_action(pdu_group_info_t *pdu_group_info)
+static void action_relay_map(pdu_group_info_t *pdu_group_info)
 {
 	int i;
 	bitmap_t *relay_map = pdu_group_info->relay_map;
@@ -1584,7 +1584,7 @@ static void relay_map_action(pdu_group_info_t *pdu_group_info)
 	}
 }
 
-static int sync_relay_map(pdu_group_info_t *pdu_group_info)
+static int check_relay_node_fb(pdu_group_info_t *pdu_group_info)
 {
 	int ret = 0;
 	int i;
@@ -1619,7 +1619,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		case CHANNELS_CHANGE_STATE_IDLE: {
 			uint8_t fault = 0;
 
-			if(sync_relay_map(pdu_group_info) != 0) {
+			if(check_relay_node_fb(pdu_group_info) != 0) {
 				debug("");
 				fault = 1;
 			}
@@ -1629,7 +1629,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_PREPARE_FREE: {//准备释放模块组
-			if(pdu_group_channel_relay_fb_sync(pdu_group_info) == 0) {
+			if(check_channel_relay_fb_sync(pdu_group_info) == 0) {//确认停用的终端已完全断开输出
 				channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
 				pdu_config_t *pdu_config = &channels_info->channels_settings.pdu_config;
 				pdu_group_info_power_module_group_policy_t *policy = get_pdu_group_info_power_module_group_policy(pdu_config->policy);
@@ -1656,7 +1656,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG: {//释放模块组后下发配置
-			relay_map_action(pdu_group_info);
+			action_relay_map(pdu_group_info);
 			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_FREE_CONFIG_SYNC;
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
@@ -1671,7 +1671,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 				set_fault(pdu_group_info->faults, PDU_GROUP_RELAY_FAULT, 1);
 			}
 
-			if(sync_relay_map(pdu_group_info) == 0) {
+			if(check_relay_node_fb(pdu_group_info) == 0) {
 				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN;
 				debug("pdu_group_id %d channels_change_state to state %s",
 				      pdu_group_info->pdu_group_id,
@@ -1685,7 +1685,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 			pdu_config_t *pdu_config = &channels_info->channels_settings.pdu_config;
 			pdu_group_info_power_module_group_policy_t *policy = get_pdu_group_info_power_module_group_policy(pdu_config->policy);
 
-			if(pdu_group_channel_relay_fb_sync(pdu_group_info) == 0) {
+			if(check_channel_relay_fb_sync(pdu_group_info) == 0) {//确认停用的终端已完全断开输出
 				policy->assign(pdu_group_info);
 				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_READY_SYNC;
 				debug("pdu_group_id %d channels_change_state to state %s",
@@ -1706,7 +1706,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 		break;
 
 		case CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG: {//分配模块组后下发配置
-			relay_map_action(pdu_group_info);
+			action_relay_map(pdu_group_info);
 			pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_MODULE_ASSIGN_CONFIG_SYNC;
 			debug("pdu_group_id %d channels_change_state to state %s",
 			      pdu_group_info->pdu_group_id,
@@ -1721,7 +1721,7 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 				set_fault(pdu_group_info->faults, PDU_GROUP_RELAY_FAULT, 1);
 			}
 
-			if(sync_relay_map(pdu_group_info) == 0) {
+			if(check_relay_node_fb(pdu_group_info) == 0) {
 				channels_module_assign_ready(pdu_group_info);
 				pdu_group_info->channels_change_state = CHANNELS_CHANGE_STATE_IDLE;
 				debug("pdu_group_id %d channels_change_state to state %s",
