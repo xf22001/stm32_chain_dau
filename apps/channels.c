@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月22日 星期五 11时45分24秒
+ *   修改日期：2021年10月22日 星期五 16时01分24秒
  *   描    述：
  *
  *================================================================*/
@@ -2450,7 +2450,7 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 				//      voltage,
 				//      current);
 
-				if(abs(power_module_item_info->status.setting_output_voltage - power_module_item_info->status.module_output_voltage) <= 200) {
+				if(abs(power_module_item_info->status.setting_output_voltage - power_module_item_info->status.module_output_voltage) <= 300) {
 					//if(ticks_duration(ticks, power_module_item_info->test_stamp) >= (power_module_item_info->module_id * 1000 / 4)) {
 					power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_READY;
 					debug("module_id %d to state %s",
@@ -2548,10 +2548,12 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 
 			power_module_item_set_out_voltage_current(power_module_item_info, 0, 0);
 
-			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_IDLE;
-			debug("module_id %d to state %s",
-			      power_module_item_info->module_id,
-			      get_power_module_item_state_des(power_module_item_info->status.state));
+			if(power_module_item_info->status.module_output_voltage <= 500) {
+				power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_IDLE;
+				debug("module_id %d to state %s",
+				      power_module_item_info->module_id,
+				      get_power_module_item_state_des(power_module_item_info->status.state));
+			}
 		}
 		break;
 
