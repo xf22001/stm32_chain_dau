@@ -6,7 +6,7 @@
 #   文件名称：user.mk
 #   创 建 者：肖飞
 #   创建日期：2019年10月25日 星期五 13时04分38秒
-#   修改日期：2021年10月25日 星期一 08时54分57秒
+#   修改日期：2021年10月25日 星期一 13时25分11秒
 #   描    述：
 #
 #================================================================
@@ -136,11 +136,11 @@ default: all
 
 IAP_FILE := apps/modules/os/iap.h
 
-define update-iap-include
-	if [ -f $(IAP_FILE) ]; then
-		touch $(IAP_FILE);
-	fi
-endef
+#define update-iap-include
+#	if [ -f $(IAP_FILE) ]; then
+#		touch $(IAP_FILE);
+#	fi
+#endef
 
 ifneq ($(call ifdef_any_of,USER_APP),)
 build-type := .app.stamps
@@ -158,8 +158,8 @@ $(info "build bootloader!")
 endif
 
 $(build-type) :
+#	$(shell $(update-iap-include))
 	-rm $(build-type-invalid)
-	$(shell $(update-iap-include))
 	touch $@
 
 
