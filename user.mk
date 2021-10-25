@@ -6,7 +6,7 @@
 #   文件名称：user.mk
 #   创 建 者：肖飞
 #   创建日期：2019年10月25日 星期五 13时04分38秒
-#   修改日期：2021年10月14日 星期四 10时51分28秒
+#   修改日期：2021年10月25日 星期一 08时54分57秒
 #   描    述：
 #
 #================================================================
@@ -14,6 +14,9 @@
 
 include sal/sal.mk
 include config.mk
+
+ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(addprefix CONFIG_,$(v)))))
+ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(addprefix CONFIG_,$(v)))))
 
 USER_C_INCLUDES += -Iapps
 USER_C_INCLUDES += -Iapps/modules
@@ -50,7 +53,7 @@ USER_C_SOURCES += apps/channels_config.c
 USER_C_SOURCES += apps/can_config.c
 USER_C_SOURCES += apps/wiznet_spi.c
 USER_C_SOURCES += apps/storage_config.c
-ifeq ("$(origin TEST)", "command line")
+ifneq ($(call ifdef_any_of,PSEUDO_ENV),)
 USER_C_SOURCES += apps/channels_communication_pseudo.c
 else
 USER_C_SOURCES += apps/channels_communication.c
@@ -61,14 +64,15 @@ USER_C_SOURCES += apps/channels.c
 
 USER_C_SOURCES += apps/modules/app/config_utils.c
 USER_C_SOURCES += apps/modules/app/poll_loop.c
+USER_C_SOURCES += apps/modules/app/request.c
 USER_C_SOURCES += apps/modules/app/probe_tool.c
 USER_C_SOURCES += apps/modules/app/uart_debug.c
-USER_C_SOURCES += apps/modules/app/request.c
 USER_C_SOURCES += apps/modules/app/can_data_task.c
 USER_C_SOURCES += apps/modules/app/uart_data_task.c
 USER_C_SOURCES += apps/modules/app/usbh_user_callback.c
 USER_C_SOURCES += apps/modules/app/early_sys_callback.c
 USER_C_SOURCES += apps/modules/app/connect_state.c
+USER_C_SOURCES += apps/modules/app/ntc_temperature.c
 USER_C_SOURCES += apps/modules/app/can_command.c
 USER_C_SOURCES += apps/modules/app/display.c
 USER_C_SOURCES += apps/modules/app/power_modules/power_modules.c
@@ -80,18 +84,17 @@ USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_stategrid
 USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_yyln.c
 USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_winline.c
 USER_C_SOURCES += apps/modules/app/power_modules/power_modules_handler_zte.c
-USER_C_SOURCES += apps/modules/app/ntc_temperature.c
 USER_C_SOURCES += apps/modules/hardware/flash.c
 USER_C_SOURCES += apps/modules/hardware/modbus_slave_txrx.c
 USER_C_SOURCES += apps/modules/hardware/modbus_spec.c
 USER_C_SOURCES += apps/modules/hardware/storage.c
-ifdef CONFIG_STORAGE_25LC1024
+ifneq ($(call ifdef_any_of,STORAGE_OPS_25LC1024),)
 USER_C_SOURCES += apps/modules/hardware/storage_25lc1024.c
 endif
-ifdef CONFIG_STORAGE_24LC128
+ifneq ($(call ifdef_any_of,STORAGE_OPS_24LC128),)
 USER_C_SOURCES += apps/modules/hardware/storage_24lc128.c
 endif
-ifdef CONFIG_STORAGE_W25Q256
+ifneq ($(call ifdef_any_of,STORAGE_OPS_W25Q256),)
 USER_C_SOURCES += apps/modules/hardware/storage_w25q256.c
 endif
 USER_C_SOURCES += apps/modules/hardware/hw_adc.c
@@ -120,23 +123,16 @@ C_SOURCES += $(USER_C_SOURCES)
 USER_CFLAGS += -DtraceTASK_SWITCHED_IN=StartIdleMonitor -DtraceTASK_SWITCHED_OUT=EndIdleMonitor
 USER_CFLAGS += -DSAL_HOOK
 USER_CFLAGS += -DLOG_CONFIG_FILE=\"log_config.h\"
-ifdef CONFIG_STORAGE_25LC1024
-USER_CFLAGS += -D$(CONFIG_STORAGE_25LC1024)
-endif
-ifdef CONFIG_STORAGE_24LC128
-USER_CFLAGS += -D$(CONFIG_STORAGE_24LC128)
-endif
-ifdef CONFIG_STORAGE_W25Q256
-USER_CFLAGS += -D$(CONFIG_STORAGE_W25Q256)
-endif
 
 #USER_CFLAGS += -DLOG_DISABLE
 #USER_CFLAGS += -DALLOC_TRACE_DISABLE
 
-CFLAGS += $(USER_CFLAGS)
+CFLAGS += $(USER_CFLAGS) $(CONFIG_CFLAGS)
 
 #LDFLAGS += -u _printf_float -Wl,--wrap=srand  -Wl,--wrap=rand
 LDFLAGS += -u _printf_float
+
+default: all
 
 IAP_FILE := apps/modules/os/iap.h
 
@@ -146,7 +142,7 @@ define update-iap-include
 	fi
 endef
 
-ifeq ("$(origin APP)", "command line")
+ifneq ($(call ifdef_any_of,USER_APP),)
 build-type := .app.stamps
 build-type-invalid := .bootloader.stamps
 CFLAGS += -DUSER_APP
@@ -161,14 +157,16 @@ LDSCRIPT = STM32F407VGTx_FLASH.ld
 $(info "build bootloader!")
 endif
 
-default: all
-
-all : $(build-type)
-
 $(build-type) :
 	-rm $(build-type-invalid)
 	$(shell $(update-iap-include))
 	touch $@
+
+
+PHONY += all
+PHONY += default
+
+USER_DEPS := sal/sal.mk config.mk $(build-type)
 
 cscope: all
 	rm cscope e_cs -rf
@@ -194,3 +192,7 @@ cscope: all
 clean: clean-cscope
 clean-cscope:
 	rm cscope e_cs -rf
+
+firmware:
+	python apps/modules/fw.py -f build/eva.bin
+

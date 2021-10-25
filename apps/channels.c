@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月22日 星期五 16时01分24秒
+ *   修改日期：2021年10月25日 星期一 13时15分20秒
  *   描    述：
  *
  *================================================================*/
@@ -344,7 +344,7 @@ static void default_handle_channel_event(void *_channel_info, void *_channels_ev
 
 	switch(channel_event->type) {
 		case CHANNEL_EVENT_TYPE_START_CHANNEL: {
-			debug("channel_id %d process event %s!", channel_info->channel_id, get_channel_event_type_des(channel_event->type));
+			//debug("channel_id %d process event %s!", channel_info->channel_id, get_channel_event_type_des(channel_event->type));
 
 			if(try_to_start_channel(channel_info) != 0) {
 			}
@@ -353,7 +353,7 @@ static void default_handle_channel_event(void *_channel_info, void *_channels_ev
 
 		case CHANNEL_EVENT_TYPE_STOP_CHANNEL: {
 			if(channel_info->status.state != CHANNEL_STATE_IDLE) {
-				debug("channel_id %d process event %s!", channel_info->channel_id, get_channel_event_type_des(channel_event->type));
+				//debug("channel_id %d process event %s!", channel_info->channel_id, get_channel_event_type_des(channel_event->type));
 
 				if(try_to_stop_channel(channel_info) != 0) {
 				}
@@ -1034,6 +1034,7 @@ static void channel_info_deactive_unneeded_power_module_group_average(channel_in
 	struct list_head *pos;
 	struct list_head *n;
 	struct list_head *head;
+	pdu_group_info_t *pdu_group_info = channel_info->pdu_group_info;
 	channels_info_t *channels_info = (channels_info_t *)channel_info->channels_info;
 	struct list_head list_unneeded_power_module_group = LIST_HEAD_INIT(list_unneeded_power_module_group);
 	power_module_group_info_t *power_module_group_info_item;
@@ -1050,6 +1051,20 @@ static void channel_info_deactive_unneeded_power_module_group_average(channel_in
 	if(list_contain(&power_module_group_info_item->list, &list_unneeded_power_module_group) == 0) {
 		//恢复模块归属
 		list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+	}
+
+	head = &list_unneeded_power_module_group;
+
+	//清理需要关闭的模块
+	list_for_each_safe(pos, n, head) {
+		power_module_group_info_t *power_module_group_info = list_entry(pos, power_module_group_info_t, list);
+		power_module_item_info_t *power_module_item_info;
+		struct list_head *head1 = &power_module_group_info->power_module_item_list;
+		list_for_each_entry(power_module_item_info, head1, power_module_item_info_t, list) {
+			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
+		}
+		list_move_tail(&power_module_group_info->list, &pdu_group_info->power_module_group_deactive_list);
+		debug("remove module group_id %d from channel_id %d", power_module_group_info->group_id, channel_info->channel_id);
 	}
 }
 
@@ -1287,6 +1302,23 @@ static void channel_info_assign_one_power_module_group_agerage(channel_info_t *c
 	channel_info_t *channel_info_item_prev;
 	power_module_group_info_t *power_module_group_info_item;
 	//channel_relay_fb_node_info_t *channel_relay_fb_node_info;
+
+	power_module_group_info_item = channels_info->power_module_group_info + channel_info->channel_id;
+
+	if(list_contain(&power_module_group_info_item->list, &pdu_group_info->power_module_group_idle_list) == 0) {
+		power_module_item_info_t *power_module_item_info;
+		head = &power_module_group_info_item->power_module_item_list;
+		list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
+			if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
+				debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
+			}
+
+			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
+		}
+		power_module_group_info_item->channel_info = channel_info;
+		list_move_tail(&power_module_group_info_item->list, &channel_info->power_module_group_list);
+		debug("assign module group_id %d to channel_id %d", power_module_group_info_item->group_id, channel_info->channel_id);
+	}
 
 	//left search
 	channel_info_item_prev = channel_info;
@@ -1890,6 +1922,8 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 				channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
 				pdu_config_t *pdu_config = &channels_info->channels_settings.pdu_config;
 				pdu_group_info_power_module_group_policy_t *policy = get_pdu_group_info_power_module_group_policy(pdu_config->policy);
+
+				OS_ASSERT(policy != NULL);
 				debug("pdu_group_id %d get policy %s", pdu_group_info->pdu_group_id, get_power_module_policy_des(pdu_config->policy));
 
 				if(policy->free(pdu_group_info) == 0) {//返回0表示释放操作完成
@@ -1941,6 +1975,9 @@ static void handle_channels_change_state(pdu_group_info_t *pdu_group_info)
 			channels_info_t *channels_info = (channels_info_t *)pdu_group_info->channels_info;
 			pdu_config_t *pdu_config = &channels_info->channels_settings.pdu_config;
 			pdu_group_info_power_module_group_policy_t *policy = get_pdu_group_info_power_module_group_policy(pdu_config->policy);
+
+			OS_ASSERT(policy != NULL);
+			debug("pdu_group_id %d get policy %s", pdu_group_info->pdu_group_id, get_power_module_policy_des(pdu_config->policy));
 
 			if(check_channel_relay_fb_sync(pdu_group_info) == 0) {//确认停用的终端已完全断开输出
 				policy->assign(pdu_group_info);
@@ -2639,7 +2676,6 @@ static uint8_t power_module_policy_value = POWER_MODULE_POLICY_PRIORITY;
 void set_power_module_policy_request(power_module_policy_t policy)
 {
 	update_power_module_policy_request = 1;
-	policy = POWER_MODULE_POLICY_PRIORITY;
 	power_module_policy_value = policy;
 }
 
@@ -2669,7 +2705,7 @@ static void handle_power_module_policy_request(channels_info_t *channels_info)
 
 			update_power_module_policy_request = 0;
 			pdu_config->policy = power_module_policy_value;
-			pdu_config->policy = POWER_MODULE_POLICY_PRIORITY;//xiaofei
+			channels_info_save_config(channels_info);
 
 			debug("set policy %s", get_power_module_policy_des(pdu_config->policy));
 		}

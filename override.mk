@@ -25,7 +25,11 @@ $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	mkdir -p $(dir $@)
 	$(AS) -c $(subst -MMD,-MD,$(CFLAGS)) $< -o $@
 
-$(USER_OBJECTS): user.mk
+$(USER_OBJECTS): override.mk user.mk $(USER_DEPS)
+
+all: $(USER_OBJECTS)
+
+.PHONY: $(PHONY)
 
 DEPS := $(OBJECTS:.o=.d)
 -include $(DEPS)
