@@ -6,7 +6,7 @@
 #   文件名称：user.mk
 #   创 建 者：肖飞
 #   创建日期：2019年10月25日 星期五 13时04分38秒
-#   修改日期：2021年10月25日 星期一 13时25分11秒
+#   修改日期：2021年10月25日 星期一 14时51分19秒
 #   描    述：
 #
 #================================================================
@@ -166,7 +166,7 @@ $(build-type) :
 PHONY += all
 PHONY += default
 
-USER_DEPS := sal/sal.mk config.mk $(build-type)
+USER_DEPS := sal/sal.mk config.mk $(build-type) $(LDSCRIPT)
 
 cscope: all
 	rm cscope e_cs -rf
