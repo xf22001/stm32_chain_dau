@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月25日 星期一 13时15分20秒
+ *   修改日期：2021年10月28日 星期四 14时33分49秒
  *   描    述：
  *
  *================================================================*/
@@ -419,7 +419,11 @@ static void module_power_limit_correction(channels_settings_t *channels_settings
 		uint32_t max_power = channels_settings->module_max_output_power * 100;
 
 		if(power > max_power) {
-			*current = max_power / *voltage;
+			uint16_t limit_current = max_power / *voltage;
+
+			if(limit_current < *current) {
+				*current = limit_current;
+			}
 		}
 	}
 }
@@ -2443,7 +2447,16 @@ static void power_module_item_set_out_voltage_current(power_module_item_info_t *
 	if(u_power_module_status.s.poweroff != power_off) {
 		if(power_off == 0) {
 			if(channel_info != NULL) {
+				channels_info_t *channels_info = (channels_info_t *)channel_info->channels_info;
+				channels_settings_t *channels_settings = &channels_info->channels_settings;
+				uint32_t battery_voltage = channels_settings->module_min_output_voltage * 100;
+
+				if(battery_voltage == 0) {
+					battery_voltage = 200000;
+				}
+
 				power_modules_set_channel_id(power_modules_info, power_module_item_info->module_id, channel_info->channel_id);
+				power_modules_set_battery_voltage(power_modules_info, power_module_item_info->module_id, battery_voltage);
 			}
 		}
 
