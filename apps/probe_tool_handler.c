@@ -6,7 +6,7 @@
  *   文件名称：probe_tool_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年03月20日 星期五 12时48分07秒
- *   修改日期：2021年10月25日 星期一 14时39分09秒
+ *   修改日期：2021年11月02日 星期二 14时55分54秒
  *   描    述：
  *
  *================================================================*/
@@ -17,7 +17,6 @@
 #include "lwip/netdb.h"
 #include "lwip/inet.h"
 
-#include "net_client.h"
 #include "flash.h"
 #include "iap.h"
 #include "channels.h"
@@ -272,8 +271,6 @@ static void fn5(request_t *request)
 	}
 }
 
-extern protocol_if_t protocol_if_tcp;
-extern protocol_if_t protocol_if_udp;
 static void fn6(request_t *request)
 {
 	start_dump_channels_stats();
