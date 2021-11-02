@@ -25,6 +25,7 @@ USER_C_INCLUDES += -Iapps/modules/drivers
 USER_C_INCLUDES += -Iapps/modules/hardware
 USER_C_INCLUDES += -Iapps/modules/app
 USER_C_INCLUDES += -Iapps/modules/app/power_modules
+USER_C_INCLUDES += -Iapps/modules/app/vfs_disk
 USER_C_INCLUDES += -Iapps/modules/app/net_client
 USER_C_INCLUDES += -Iapps/modules/tests
 
@@ -46,6 +47,8 @@ USER_C_INCLUDES += -IMiddlewares/Third_Party/LwIP/system/arch
 C_INCLUDES += $(USER_C_INCLUDES)
 
 USER_C_SOURCES += apps/os_memory.c
+USER_C_SOURCES += apps/os_random.c
+USER_C_SOURCES += apps/early_sys_callback.c
 USER_C_SOURCES += apps/app.c
 USER_C_SOURCES += apps/uart_debug_handler.c
 USER_C_SOURCES += apps/probe_tool_handler.c
@@ -67,6 +70,8 @@ USER_C_SOURCES += apps/modules/app/poll_loop.c
 USER_C_SOURCES += apps/modules/app/request.c
 USER_C_SOURCES += apps/modules/app/probe_tool.c
 USER_C_SOURCES += apps/modules/app/uart_debug.c
+USER_C_SOURCES += apps/modules/app/vfs_disk/vfs.c
+USER_C_SOURCES += apps/modules/app/mt_file.c
 USER_C_SOURCES += apps/modules/app/can_data_task.c
 USER_C_SOURCES += apps/modules/app/uart_data_task.c
 USER_C_SOURCES += apps/modules/app/usbh_user_callback.c
@@ -173,15 +178,18 @@ cscope: all
 	mkdir -p cscope
 	#$(silent)tags.sh prepare;
 	$(silent)touch dep_files;
+	$(silent)touch raw_dep_files;
 	$(silent)for f in $$(find . -type f -name "*.d" 2>/dev/null); do \
-		for i in $$(cat "$$f" | sed 's/^.*://g' | sed 's/[\\ ]/\n/g' | sort -h | uniq); do \
-			if test "$${i:0:1}" = "/";then \
-				echo "$$i" >> dep_files; \
-			else \
-				readlink -f "$$i" >> dep_files; \
-			fi; \
-		done; \
+		cat "$$f" >> raw_dep_files; \
 	done;
+	for i in $$(cat "raw_dep_files" | sed 's/^.*://g' | sed 's/[\\ ]/\n/g' | sort -h | uniq); do \
+		if test "$${i:0:1}" = "/";then \
+			echo "$$i" >> dep_files; \
+		else \
+			readlink -f "$$i" >> dep_files; \
+		fi; \
+	done; \
+	$(silent)rm raw_dep_files
 	$(silent)cat dep_files | sort | uniq | sed 's/^\(.*\)$$/\"\1\"/g' >> cscope/cscope.files;
 	$(silent)cat dep_files | sort | uniq >> cscope/ctags.files;
 	$(silent)rm dep_files

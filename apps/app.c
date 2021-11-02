@@ -66,7 +66,10 @@ int app_save_config(void)
 
 void app_init(void)
 {
+	mem_info_init();
+	mt_file_init();
 	app_event = signal_create(1);
+	OS_ASSERT(app_event != NULL);
 }
 
 void send_app_event(app_event_t event)
@@ -189,6 +192,8 @@ void app(void const *argument)
 	display_info_t *display_info = NULL;
 	int ret;
 
+	app_init();
+
 	app_info = (app_info_t *)os_calloc(1, sizeof(app_info_t));
 
 	OS_ASSERT(app_info != NULL);
@@ -221,7 +226,6 @@ void app(void const *argument)
 		snprintf(app_info->mechine_info.sn, sizeof(app_info->mechine_info.sn), "%d.%d.%d.%d", 255, 255, 255, 0);
 		snprintf(app_info->mechine_info.gw, sizeof(app_info->mechine_info.gw), "%d.%d.%d.%d", 192, 168, 1, 1);
 		app_info->mechine_info.dhcp_enable = 0;
-		app_info->mechine_info.upgrade_enable = 0;
 		app_info->mechine_info.reset_config = 0;
 		app_save_config();
 	}
@@ -266,9 +270,6 @@ void app(void const *argument)
 
 		if(ret == 0) {
 			switch(event) {
-				case APP_EVENT_USB: {
-					//start_usb_upgrade();
-				}
 				break;
 
 				default: {
@@ -277,8 +278,6 @@ void app(void const *argument)
 			}
 		}
 
-		//handle_open_log();
-		//handle_usb_upgrade();
 	}
 }
 
