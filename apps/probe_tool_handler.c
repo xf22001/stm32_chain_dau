@@ -74,6 +74,18 @@ static void fn3(request_t *request)
 	uint8_t *data = (uint8_t *)(request + 1);
 	uint8_t start_upgrade_app = 0;
 
+	if(is_app() == 1) {
+		if(set_app_valid(0) != 0) {
+			debug("");
+			return;
+		}
+
+		_printf("reset to bootloader!\n");
+
+		HAL_NVIC_SystemReset();
+		return;
+	}
+
 	if(stage == 0) {
 		flash_erase_sector(IAP_CONST_FW_ADDRESS_START_SECTOR, IAP_CONST_FW_ADDRESS_SECTOR_NUMBER);
 	} else if(stage == 1) {

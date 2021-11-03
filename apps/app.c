@@ -270,8 +270,6 @@ void app(void const *argument)
 
 		if(ret == 0) {
 			switch(event) {
-				break;
-
 				default: {
 				}
 				break;
