@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年10月28日 星期四 14时33分49秒
+ *   修改日期：2021年11月04日 星期四 11时02分59秒
  *   描    述：
  *
  *================================================================*/
@@ -2267,9 +2267,9 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 		fault_changed = 1;
 	}
 
-	if(ticks_duration(ticks, get_power_module_connect_stamp(power_module_info)) >= (10 * 1000)) {
+	if(ticks_duration(ticks, get_power_module_connect_stamp(power_modules_info, power_module_item_info->module_id)) >= (10 * 1000)) {
 		if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_DISABLE) {
-			debug("ticks:%d, power module_id %d stamps:%d", ticks, power_module_item_info->module_id, get_power_module_connect_stamp(power_module_info));
+			debug("ticks:%d, power module_id %d stamps:%d", ticks, power_module_item_info->module_id, get_power_module_connect_stamp(power_modules_info, power_module_item_info->module_id));
 		}
 
 		connect_timeout = 1;
@@ -2356,7 +2356,7 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 
 	status->module_status = u_power_module_status.v;
 
-	status->connect_state = get_power_module_connect_state(power_module_info);
+	status->connect_state = get_power_module_connect_state(power_modules_info, power_module_item_info->module_id);
 
 	channels_com_info = (channels_com_info_t *)channels_info->channels_com_info;
 	module_status = (module_status_t *)channels_com_info->module_status;
@@ -2729,8 +2729,9 @@ static void handle_power_module_type_config(channels_info_t *channels_info)
 {
 	power_modules_info_t *power_modules_info = (power_modules_info_t *)channels_info->power_modules_info;
 	channels_settings_t *channels_settings = &channels_info->channels_settings;
+	power_modules_handler_t *power_modules_handler = (power_modules_handler_t *)power_modules_info->power_modules_handler;
 
-	if(channels_info->channels_settings.power_module_type != power_modules_info->power_module_type) {
+	if((power_modules_handler == NULL) || (channels_info->channels_settings.power_module_type != power_modules_handler->power_module_type)) {
 		power_modules_set_type(power_modules_info, channels_settings->power_module_type);
 	}
 }

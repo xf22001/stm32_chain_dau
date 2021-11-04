@@ -6,7 +6,7 @@
  *   文件名称：app.c
  *   创 建 者：肖飞
  *   创建日期：2019年10月11日 星期五 16时54分03秒
- *   修改日期：2021年10月18日 星期一 15时06分19秒
+ *   修改日期：2021年11月04日 星期四 11时05分07秒
  *   描    述：
  *
  *================================================================*/
@@ -17,6 +17,7 @@
 #include "iwdg.h"
 
 #include "os_utils.h"
+#include "mt_file.h"
 #include "config_layout.h"
 
 #include "test_serial.h"
@@ -225,7 +226,7 @@ void app(void const *argument)
 		snprintf(app_info->mechine_info.ip, sizeof(app_info->mechine_info.ip), "%d.%d.%d.%d", 192, 168, 1, 122);
 		snprintf(app_info->mechine_info.sn, sizeof(app_info->mechine_info.sn), "%d.%d.%d.%d", 255, 255, 255, 0);
 		snprintf(app_info->mechine_info.gw, sizeof(app_info->mechine_info.gw), "%d.%d.%d.%d", 192, 168, 1, 1);
-		app_info->mechine_info.dhcp_enable = 0;
+		app_info->mechine_info.dhcp_enable = 1;
 		app_info->mechine_info.reset_config = 0;
 		app_save_config();
 	}
