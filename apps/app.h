@@ -65,13 +65,20 @@ typedef struct {
 
 typedef enum {
 	APP_EVENT_NONE = 0,
+	APP_EVENT_HOST_USER_SELECT_CONFIGURATION,
+	APP_EVENT_HOST_USER_CLASS_ACTIVE,
+	APP_EVENT_HOST_USER_CLASS_SELECTED,
+	APP_EVENT_HOST_USER_CONNECTION,
+	APP_EVENT_HOST_USER_DISCONNECTION,
+	APP_EVENT_HOST_USER_UNRECOVERED_ERROR,
 } app_event_t;
 
 app_info_t *get_app_info(void);
 int app_load_config(void);
 int app_save_config(void);
+int app_event_init(size_t size);
 void app_init(void);
-void send_app_event(app_event_t event);
+void send_app_event(app_event_t event, uint32_t timeout);
 void load_app_display_cache(app_info_t *app_info);
 void sync_app_display_cache(app_info_t *app_info);
 void update_network_ip_config(app_info_t *app_info);

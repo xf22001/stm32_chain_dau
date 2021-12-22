@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时13分49秒
- *   修改日期：2021年10月21日 星期四 10时04分24秒
+ *   修改日期：2021年12月22日 星期三 14时41分56秒
  *   描    述：
  *
  *================================================================*/
@@ -840,7 +840,11 @@ void channels_modbus_data_action(void *fn_ctx, void *chain_ctx)
 		break;
 
 		case MODBUS_ADDR_MODULE_TYPE: {
-			modbus_data_value_rw(modbus_data_ctx, channels_info->channels_settings.power_module_type);
+			modbus_data_value_rw(modbus_data_ctx, channels_info->display_cache_channels.power_module_type);
+
+			if(modbus_data_ctx->action == MODBUS_DATA_ACTION_SET) {
+				channels_info->display_cache_channels.power_module_type_sync = 1;
+			}
 		}
 		break;
 
@@ -911,6 +915,7 @@ void channels_modbus_data_action(void *fn_ctx, void *chain_ctx)
 			modbus_data_value_r(modbus_data_ctx, fault);
 		}
 		break;
+
 		case MODBUS_ADDR_RELAY_FAULT_ID: {
 			pdu_group_info_t *pdu_group_info = channels_info->pdu_group_info + 0;
 			modbus_data_value_r(modbus_data_ctx, pdu_group_info->relay_fault_id);

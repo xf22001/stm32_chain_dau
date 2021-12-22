@@ -6,7 +6,7 @@
  *   文件名称：channels_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时17分57秒
- *   修改日期：2021年09月18日 星期六 11时35分30秒
+ *   修改日期：2021年12月22日 星期三 14时17分43秒
  *   描    述：
  *
  *================================================================*/
@@ -164,9 +164,9 @@ static channels_config_t channels_config = {
 	},
 
 	.power_module_config = {
-		.channels_power_module_number = 0,
+		.power_module_number = 0,
 		.hcan = &hcan2,
-		.channels_power_module_type = CHANNELS_POWER_MODULE_TYPE_NATIVE,
+		.power_module_type = CHANNELS_POWER_MODULE_TYPE_NATIVE,
 	},
 	.relay_info = {
 		.pdu_group_size = ARRAY_SIZE(pdu_group_relay_info_sz),

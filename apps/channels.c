@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年11月28日 星期日 13时58分55秒
+ *   修改日期：2021年12月22日 星期三 14时17分26秒
  *   描    述：
  *
  *================================================================*/
@@ -35,33 +35,6 @@ typedef union {
 } u_power_module_status_t;
 
 static object_class_t *channels_class = NULL;
-
-static uint8_t list_size(struct list_head *head)
-{
-	uint8_t size = 0;
-	struct list_head *pos;
-
-	list_for_each(pos, head) {
-		size++;
-	}
-
-	return size;
-}
-
-static int list_contain(struct list_head *item, struct list_head *head)
-{
-	int ret = -1;
-	struct list_head *pos;
-
-	list_for_each(pos, head) {
-		if(pos == item) {
-			ret = 0;
-			break;
-		}
-	}
-
-	return ret;
-}
 
 char *get_channel_state_des(channel_state_t state)
 {
@@ -904,7 +877,7 @@ static relay_node_info_t *get_relay_node_info_by_channel_id(channels_config_t *c
 	return relay_node_info;
 }
 
-static relay_node_info_t *get_relay_node_info_relay_id(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t relay_id)
+static relay_node_info_t *get_relay_node_info_by_relay_id(channels_config_t *channels_config, uint8_t pdu_group_id, uint8_t relay_id)
 {
 	relay_node_info_t *relay_node_info = NULL;
 	relay_info_t *relay_info = &channels_config->relay_info;
@@ -1866,7 +1839,7 @@ static void action_relay_map(pdu_group_info_t *pdu_group_info)
 	channels_config_t *channels_config = channels_info->channels_config;
 
 	for(i = 0; i < relay_map->size; i++) {
-		relay_node_info_t *relay_node_info = get_relay_node_info_relay_id(channels_config, pdu_group_info->pdu_group_id, i);
+		relay_node_info_t *relay_node_info = get_relay_node_info_by_relay_id(channels_config, pdu_group_info->pdu_group_id, i);
 		GPIO_PinState state = GPIO_PIN_RESET;
 
 		if(get_bitmap_value(relay_map, i) != 0) {
@@ -1886,7 +1859,7 @@ static int check_relay_node_fb(pdu_group_info_t *pdu_group_info)
 	channels_config_t *channels_config = channels_info->channels_config;
 
 	for(i = 0; i < relay_map->size; i++) {
-		relay_node_info_t *relay_node_info = get_relay_node_info_relay_id(channels_config, pdu_group_info->pdu_group_id, i);
+		relay_node_info_t *relay_node_info = get_relay_node_info_by_relay_id(channels_config, pdu_group_info->pdu_group_id, i);
 		GPIO_PinState state = HAL_GPIO_ReadPin(relay_node_info->gpio_port_fb, relay_node_info->gpio_pin_fb);
 		GPIO_PinState expect_state = GPIO_PIN_RESET;
 
@@ -3280,7 +3253,7 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 		OS_ASSERT(channel_info_item->faults != NULL);
 	}
 
-	channels_config->power_module_config.channels_power_module_number = channels_info->power_module_item_number;
+	channels_config->power_module_config.power_module_number = channels_info->power_module_item_number;
 	channels_config->channel_number = channels_info->channel_number;
 
 	channels_info->power_modules_info = alloc_power_modules_info(channels_info->channels_config);
@@ -3381,9 +3354,9 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	channels_info->common_periodic_callback_item.fn_ctx = channels_info;
 	OS_ASSERT(register_callback(channels_info->common_periodic_chain, &channels_info->common_periodic_callback_item) == 0);
 
-	display_info = alloc_display_info(channels_info);
+	alloc_display_info(channels_info);
+	display_info = (display_info_t *)channels_info->display_info;
 	OS_ASSERT(display_info != NULL);
-	channels_info->display_info = display_info;
 
 	channels_info->display_data_action_callback_item.fn = channels_modbus_data_action;
 	channels_info->display_data_action_callback_item.fn_ctx = channels_info;

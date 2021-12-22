@@ -65,17 +65,29 @@ int app_save_config(void)
 	return save_config_item(app_info->storage_info, "eva", &app_info->mechine_info, sizeof(mechine_info_t), offset);
 }
 
+int app_event_init(size_t size)
+{
+	int ret = -1;
+
+	if(app_event != NULL) {
+		return ret;
+	}
+
+	app_event = signal_create(size);
+	OS_ASSERT(app_event != NULL);
+	ret = 0;
+	return ret;
+}
+
 void app_init(void)
 {
 	mem_info_init();
 	mt_file_init();
-	app_event = signal_create(1);
-	OS_ASSERT(app_event != NULL);
 }
 
-void send_app_event(app_event_t event)
+void send_app_event(app_event_t event, uint32_t timeout)
 {
-	signal_send(app_event, event, 0);
+	signal_send(app_event, event, timeout);
 }
 
 static void app_mechine_info_invalid(void *fn_ctx, void *chain_ctx)
@@ -187,7 +199,6 @@ uint8_t app_get_reset_config(void)
 
 void app(void const *argument)
 {
-
 	poll_loop_t *poll_loop;
 	channels_info_t *channels_info = NULL;
 	display_info_t *display_info = NULL;
