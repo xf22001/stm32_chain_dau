@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年12月22日 星期三 14时17分26秒
+ *   修改日期：2021年12月23日 星期四 13时39分19秒
  *   描    述：
  *
  *================================================================*/
@@ -3256,7 +3256,7 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	channels_config->power_module_config.power_module_number = channels_info->power_module_item_number;
 	channels_config->channel_number = channels_info->channel_number;
 
-	channels_info->power_modules_info = alloc_power_modules_info(channels_info->channels_config);
+	channels_info->power_modules_info = alloc_power_modules_info(channels_info);
 	OS_ASSERT(channels_info->power_modules_info != NULL);
 	power_modules_set_type(channels_info->power_modules_info, channels_settings->power_module_type);
 
