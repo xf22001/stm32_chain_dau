@@ -6,7 +6,7 @@
  *   文件名称：channels_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时17分57秒
- *   修改日期：2021年12月22日 星期三 14时17分43秒
+ *   修改日期：2022年02月21日 星期一 15时19分15秒
  *   描    述：
  *
  *================================================================*/
@@ -161,10 +161,10 @@ static channels_config_t channels_config = {
 		.con_pin = con485_Pin,
 		.led_gpio = led485_GPIO_Port,
 		.led_pin = led485_Pin,
+		.station = 1,
 	},
 
 	.power_module_config = {
-		.power_module_number = 0,
 		.hcan = &hcan2,
 		.power_module_type = CHANNELS_POWER_MODULE_TYPE_NATIVE,
 	},

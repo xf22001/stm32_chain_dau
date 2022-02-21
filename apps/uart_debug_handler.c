@@ -6,7 +6,7 @@
  *   文件名称：uart_debug_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月13日 星期三 13时18分00秒
- *   修改日期：2021年07月28日 星期三 15时43分21秒
+ *   修改日期：2022年02月21日 星期一 11时34分56秒
  *   描    述：
  *
  *================================================================*/
@@ -15,9 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "lwip/netdb.h"
-#include "lwip/inet.h"
-#include "lwip/netif.h"
+#include "sal_hook.h"
 
 #define LOG_UART
 #include "log.h"
@@ -144,8 +142,6 @@ static void get_host_by_name(char *content, uint32_t size)
 
 static void fn4(char *arguments)
 {
-	_printf("local host ip:%s\n", inet_ntoa(gnetif.ip_addr));
-
 	get_host_by_name(arguments, strlen(arguments));
 }
 

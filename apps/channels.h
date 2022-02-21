@@ -6,7 +6,7 @@
  *   文件名称：channels.h
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分40秒
- *   修改日期：2021年10月20日 星期三 16时18分26秒
+ *   修改日期：2022年02月21日 星期一 15时13分10秒
  *   描    述：
  *
  *================================================================*/
@@ -237,9 +237,14 @@ typedef struct {
 #pragma pack(push, 1)
 
 typedef struct {
+	uint8_t power_module_type;//power_module_type_t
+	uint16_t rate_current;
+} power_module_settings_t;
+
+typedef struct {
 	pdu_config_t pdu_config;
 
-	uint8_t power_module_type;//power_module_type_t
+	power_module_settings_t power_module_settings;
 
 	//模块输出能力
 	uint16_t module_max_output_voltage;//最大输出电压 0.1v
@@ -286,7 +291,7 @@ typedef struct {
 	uint8_t power_module_group_number;//所有模块组数
 	power_module_group_info_t *power_module_group_info;//模块组信息
 
-	uint8_t power_module_item_number;//所有模块数
+	uint8_t power_module_number;//所有模块数
 	power_module_item_info_t *power_module_item_info;//模块信息
 
 	uint8_t pdu_group_number;//pdu组数

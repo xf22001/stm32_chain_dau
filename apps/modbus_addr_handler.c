@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时13分49秒
- *   修改日期：2021年12月22日 星期三 14时41分56秒
+ *   修改日期：2022年02月21日 星期一 15时19分46秒
  *   描    述：
  *
  *================================================================*/
@@ -489,7 +489,7 @@ static uint16_t get_module_info_by_id_field(channels_info_t *channels_info, uint
 {
 	power_module_item_info_t *power_module_item_info = channels_info->power_module_item_info + module_id;
 
-	if(module_id >= channels_info->power_module_item_number) {
+	if(module_id >= channels_info->power_module_number) {
 		return 0xffff;
 	}
 

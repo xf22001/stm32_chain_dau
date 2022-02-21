@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2021年12月23日 星期四 13时39分19秒
+ *   修改日期：2022年02月21日 星期一 15时20分13秒
  *   描    述：
  *
  *================================================================*/
@@ -784,8 +784,9 @@ static void restore_channels_settings(channels_settings_t *channels_settings)
 	//pdu_group_config->channel_number = 5;
 	//pdu_group_config->power_module_number_per_power_module_group = 3;
 
-	channels_settings->power_module_type = POWER_MODULE_TYPE_ZTE;
-	//channels_settings->power_module_type = POWER_MODULE_TYPE_PSEUDO;
+	channels_settings->power_module_settings.power_module_type = POWER_MODULE_TYPE_ZTE;
+	//channels_settings->power_module_settings.power_module_type = POWER_MODULE_TYPE_PSEUDO;
+	channels_settings->power_module_settings.rate_current = 21;
 	channels_settings->module_max_output_voltage = 7500;
 	channels_settings->module_min_output_voltage = 2000;
 	channels_settings->module_max_output_current = 1000;
@@ -2611,7 +2612,7 @@ static void handle_power_module_items_info_state(channels_info_t *channels_info)
 {
 	int i;
 
-	for(i = 0; i < channels_info->power_module_item_number; i++) {
+	for(i = 0; i < channels_info->power_module_number; i++) {
 		power_module_item_info_t *power_module_item_info = &channels_info->power_module_item_info[i];
 
 		update_poewr_module_item_info_status(power_module_item_info);
@@ -2644,7 +2645,7 @@ static void handle_fan_state(channels_info_t *channels_info)
 	GPIO_PinState state = GPIO_PIN_RESET;
 	channels_config_t *channels_config = channels_info->channels_config;
 
-	for(i = 0; i < channels_info->power_module_item_number; i++) {
+	for(i = 0; i < channels_info->power_module_number; i++) {
 		power_module_item_info_t *power_module_item_info = &channels_info->power_module_item_info[i];
 
 		if(is_power_module_item_info_idle(power_module_item_info) != 0) {
@@ -2704,8 +2705,8 @@ static void handle_power_module_type_config(channels_info_t *channels_info)
 	channels_settings_t *channels_settings = &channels_info->channels_settings;
 	power_modules_handler_t *power_modules_handler = (power_modules_handler_t *)power_modules_info->power_modules_handler;
 
-	if((power_modules_handler == NULL) || (channels_info->channels_settings.power_module_type != power_modules_handler->power_module_type)) {
-		power_modules_set_type(power_modules_info, channels_settings->power_module_type);
+	if((power_modules_handler == NULL) || (channels_info->channels_settings.power_module_settings.power_module_type != power_modules_handler->power_module_type)) {
+		power_modules_set_type(power_modules_info, channels_settings->power_module_settings.power_module_type);
 	}
 }
 
@@ -2721,7 +2722,7 @@ static void channels_debug(channels_info_t *channels_info)
 
 	_printf("all module items:\n");
 
-	for(i = 0; i < channels_info->power_module_item_number; i++) {
+	for(i = 0; i < channels_info->power_module_number; i++) {
 		power_module_item_info = channels_info->power_module_item_info + i;
 		print_power_module_item_info(1, power_module_item_info);
 	}
@@ -3216,9 +3217,9 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	OS_ASSERT(channels_info->power_module_group_number != 0);
 	debug("channels_info->power_module_group_number:%d", channels_info->power_module_group_number);
 
-	channels_info->power_module_item_number = get_power_module_item_number(pdu_config);
-	OS_ASSERT(channels_info->power_module_item_number != 0);
-	debug("channels_info->power_module_item_number:%d", channels_info->power_module_item_number);
+	channels_info->power_module_number = get_power_module_item_number(pdu_config);
+	OS_ASSERT(channels_info->power_module_number != 0);
+	debug("channels_info->power_module_number:%d", channels_info->power_module_number);
 
 	channels_info->channel_number = get_channel_number(pdu_config);
 	OS_ASSERT(channels_info->channel_number != 0);
@@ -3234,10 +3235,10 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 	OS_ASSERT(channels_info->power_module_group_info != NULL);
 
 	//分配模块信息
-	channels_info->power_module_item_info = (power_module_item_info_t *)os_calloc(channels_info->power_module_item_number, sizeof(power_module_item_info_t));
+	channels_info->power_module_item_info = (power_module_item_info_t *)os_calloc(channels_info->power_module_number, sizeof(power_module_item_info_t));
 	OS_ASSERT(channels_info->power_module_item_info != NULL);
 
-	for(i = 0; i < channels_info->power_module_item_number; i++) {
+	for(i = 0; i < channels_info->power_module_number; i++) {
 		power_module_item_info_t *power_module_item_info = channels_info->power_module_item_info + i;
 		power_module_item_info->faults = alloc_bitmap(POWER_MODULE_ITEM_FAULT_SIZE);
 		OS_ASSERT(power_module_item_info->faults != NULL);
@@ -3253,12 +3254,11 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 		OS_ASSERT(channel_info_item->faults != NULL);
 	}
 
-	channels_config->power_module_config.power_module_number = channels_info->power_module_item_number;
 	channels_config->channel_number = channels_info->channel_number;
 
 	channels_info->power_modules_info = alloc_power_modules_info(channels_info);
 	OS_ASSERT(channels_info->power_modules_info != NULL);
-	power_modules_set_type(channels_info->power_modules_info, channels_settings->power_module_type);
+	power_modules_set_type(channels_info->power_modules_info, channels_settings->power_module_settings.power_module_type);
 
 	channels_info->channels_com_info = get_or_alloc_channels_com_info(channels_info);
 	OS_ASSERT(channels_info->channels_com_info != NULL);
@@ -3305,7 +3305,7 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 			for(k = 0; k < power_module_number; k++) {
 				uint8_t module_id = power_module_item_offset++;
 				power_module_item_info_t *power_module_item_info = channels_info->power_module_item_info + module_id;
-				OS_ASSERT(module_id < channels_info->power_module_item_number);
+				OS_ASSERT(module_id < channels_info->power_module_number);
 				list_add_tail(&power_module_item_info->list, &power_module_group_info_item->power_module_item_list);
 				power_module_item_info->module_id = module_id;
 				power_module_item_info->power_modules_info = channels_info->power_modules_info;
@@ -3336,7 +3336,7 @@ static int channels_set_channels_config(channels_info_t *channels_info, channels
 
 	OS_ASSERT(channel_offset == channels_info->channel_number);
 	OS_ASSERT(power_module_group_offset == channels_info->power_module_group_number);
-	OS_ASSERT(power_module_item_offset == channels_info->power_module_item_number);
+	OS_ASSERT(power_module_item_offset == channels_info->power_module_number);
 
 	for(i = 0; i < channels_info->channel_number; i++) {
 		channel_info_t *channel_info = channels_info->channel_info + i;
