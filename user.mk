@@ -11,12 +11,12 @@
 #
 #================================================================
 
-
-include sal/sal.mk
 include config.mk
 
 ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(addprefix CONFIG_,$(v)))))
 ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(addprefix CONFIG_,$(v)))))
+
+include sal/sal.mk
 
 USER_C_INCLUDES += -Iapps
 USER_C_INCLUDES += -Iapps/modules

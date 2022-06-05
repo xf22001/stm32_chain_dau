@@ -6,7 +6,7 @@
  *   文件名称：app.c
  *   创 建 者：肖飞
  *   创建日期：2019年10月11日 星期五 16时54分03秒
- *   修改日期：2021年11月04日 星期四 11时05分07秒
+ *   修改日期：2022年06月02日 星期四 10时40分45秒
  *   描    述：
  *
  *================================================================*/
@@ -195,6 +195,30 @@ void app_set_reset_config(void)
 uint8_t app_get_reset_config(void)
 {
 	return reset_config;
+}
+
+void set_deadlock_exception(const char *file, const char *func, int line)
+{
+	static uint8_t set = 0;
+
+	if(set == 0) {
+		set = 1;
+		snprintf(app_info->display_cache_app.deadlock_location.file, 64, "%s", file);
+		snprintf(app_info->display_cache_app.deadlock_location.func, 48, "%s", func);
+		app_info->display_cache_app.deadlock_location.line = line;
+	}
+}
+
+void set_assert_failed_exception(const char *file, const char *func, int line)
+{
+	static uint8_t set = 0;
+
+	if(set == 0) {
+		set = 1;
+		snprintf(app_info->display_cache_app.assert_fail_location.file, 64, "%s", file);
+		snprintf(app_info->display_cache_app.assert_fail_location.func, 48, "%s", func);
+		app_info->display_cache_app.assert_fail_location.line = line;
+	}
 }
 
 void app(void const *argument)

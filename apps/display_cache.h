@@ -6,7 +6,7 @@
  *   文件名称：display_cache.h
  *   创 建 者：肖飞
  *   创建日期：2021年07月17日 星期六 09时42分47秒
- *   修改日期：2021年12月22日 星期三 14时41分50秒
+ *   修改日期：2022年06月02日 星期四 08时57分40秒
  *   描    述：
  *
  *================================================================*/
@@ -38,7 +38,15 @@ typedef enum {
 #pragma pack(push, 1)
 
 typedef struct {
+	uint8_t file[64];
+	uint8_t func[48];
+	uint16_t line;
+} exception_location_cache_t;
+
+typedef struct {
 	uint8_t sync;
+	exception_location_cache_t deadlock_location;
+	exception_location_cache_t assert_fail_location;
 } display_cache_app_t;
 
 typedef struct {

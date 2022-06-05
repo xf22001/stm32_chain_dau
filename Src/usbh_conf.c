@@ -313,7 +313,7 @@ USBH_StatusTypeDef USBH_LL_ResetPort(USBH_HandleTypeDef *phost)
 }
 
 /**
-  * @brief  Return the last transfered packet size.
+  * @brief  Return the last transferred packet size.
   * @param  phost: Host handle
   * @param  pipe: Pipe index
   * @retval Packet size
@@ -524,7 +524,7 @@ void USBH_Delay(uint32_t Delay)
 }
 
 /**
-  * @brief  Retuns the USB status depending on the HAL status:
+  * @brief  Returns the USB status depending on the HAL status:
   * @param  hal_status: HAL status
   * @retval USB status
   */
@@ -553,4 +553,3 @@ USBH_StatusTypeDef USBH_Get_USB_Status(HAL_StatusTypeDef hal_status)
   return usb_status;
 }
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

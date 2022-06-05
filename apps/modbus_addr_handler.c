@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时13分49秒
- *   修改日期：2022年02月21日 星期一 15时19分46秒
+ *   修改日期：2022年06月02日 星期四 10时48分55秒
  *   描    述：
  *
  *================================================================*/
@@ -919,6 +919,42 @@ void channels_modbus_data_action(void *fn_ctx, void *chain_ctx)
 		case MODBUS_ADDR_RELAY_FAULT_ID: {
 			pdu_group_info_t *pdu_group_info = channels_info->pdu_group_info + 0;
 			modbus_data_value_r(modbus_data_ctx, pdu_group_info->relay_fault_id);
+		}
+		break;
+
+		case MODBUS_ADDR_EXCEPTION_DEADLOCK_FILE ... MODBUS_ADDR_EXCEPTION_DEADLOCK_FILE + (64 / 2) - 1: {
+			app_info_t *app_info = get_app_info();
+			modbus_data_buffer_rw(modbus_data_ctx, app_info->display_cache_app.deadlock_location.file, 64 * 2, modbus_data_ctx->addr - MODBUS_ADDR_EXCEPTION_DEADLOCK_FILE);
+		}
+		break;
+
+		case MODBUS_ADDR_EXCEPTION_DEADLOCK_FUNC ... MODBUS_ADDR_EXCEPTION_DEADLOCK_FUNC + (48 / 2) - 1: {
+			app_info_t *app_info = get_app_info();
+			modbus_data_buffer_rw(modbus_data_ctx, app_info->display_cache_app.deadlock_location.func, 48 * 2, modbus_data_ctx->addr - MODBUS_ADDR_EXCEPTION_DEADLOCK_FUNC);
+		}
+		break;
+
+		case MODBUS_ADDR_EXCEPTION_DEADLOCK_LINE: {
+			app_info_t *app_info = get_app_info();
+			modbus_data_value_r(modbus_data_ctx, app_info->display_cache_app.deadlock_location.line);
+		}
+		break;
+
+		case MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FILE ... MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FILE + (64 / 2) - 1: {
+			app_info_t *app_info = get_app_info();
+			modbus_data_buffer_rw(modbus_data_ctx, app_info->display_cache_app.assert_fail_location.file, 64 * 2, modbus_data_ctx->addr - MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FILE);
+		}
+		break;
+
+		case MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FUNC ... MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FUNC + (48 / 2) - 1: {
+			app_info_t *app_info = get_app_info();
+			modbus_data_buffer_rw(modbus_data_ctx, app_info->display_cache_app.assert_fail_location.func, 48 * 2, modbus_data_ctx->addr - MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FUNC);
+		}
+		break;
+
+		case MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_LINE: {
+			app_info_t *app_info = get_app_info();
+			modbus_data_value_r(modbus_data_ctx, app_info->display_cache_app.assert_fail_location.line);
 		}
 		break;
 

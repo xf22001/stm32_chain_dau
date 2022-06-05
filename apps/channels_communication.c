@@ -6,7 +6,7 @@
  *   文件名称：channels_communication.c
  *   创 建 者：肖飞
  *   创建日期：2020年05月25日 星期一 14时24分07秒
- :   修改日期：2022年02月21日 星期一 15时20分41秒
+ :   修改日期：2022年05月30日 星期一 11时10分03秒
  *   描    述：
  *
  *================================================================*/
@@ -366,7 +366,7 @@ static int response_channel_require(channels_com_info_t *channels_com_info)
 		channel_info->status.require_work_state = channel_require->require_state;
 
 		switch(channel_require->require_state) {
-			//case CHANNEL_WORK_STATE_IDLE:
+			case CHANNEL_WORK_STATE_IDLE:
 			case CHANNEL_WORK_STATE_STOP: {//停机
 				channels_com_info->cmd_ctx[cmd_ctx_offset(channel_id, CHANNEL_CMD_MODULES_READY)].state = COMMAND_STATE_IDLE;
 				start_stop_channel(channels_info, channel_id, CHANNEL_EVENT_TYPE_STOP_CHANNEL);

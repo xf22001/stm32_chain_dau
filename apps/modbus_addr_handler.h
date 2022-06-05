@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.h
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时11分10秒
- *   修改日期：2021年10月20日 星期三 16时59分02秒
+ *   修改日期：2022年06月02日 星期四 09时18分04秒
  *   描    述：
  *
  *================================================================*/
@@ -74,7 +74,6 @@ typedef enum {
 	add_enum_module_info(12),
 	add_enum_module_info(13),
 	add_enum_module_info(14),
-	addr_current_max,
 	addr_pad_module_info_end = 120,
 
 	add_enum_channel_info(0),
@@ -149,6 +148,16 @@ typedef enum {
 	MODBUS_ADDR_PDU_GROUP2_POWER_MODULE_NUMBER_PER_POWER_MODULE_GROUP,
 	MODBUS_ADDR_PDU_GROUP_FAULT,
 	MODBUS_ADDR_RELAY_FAULT_ID,
+
+	MODBUS_ADDR_EXCEPTION_DEADLOCK_FILE = 10000,
+	MODBUS_ADDR_EXCEPTION_DEADLOCK_FUNC = MODBUS_ADDR_EXCEPTION_DEADLOCK_FILE + (64 / 2),
+	MODBUS_ADDR_EXCEPTION_DEADLOCK_LINE = MODBUS_ADDR_EXCEPTION_DEADLOCK_FUNC + (48 / 2),
+
+	MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FILE = MODBUS_ADDR_EXCEPTION_DEADLOCK_LINE + (2 / 2),
+	MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FUNC = MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FILE + (64 / 2),
+	MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_LINE = MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_FUNC + (48 / 2),
+	
+	addr_current_max = MODBUS_ADDR_EXCEPTION_ASSERT_FAILED_LINE + (2 / 2),
 
 	MODBUS_ADDR_SIZE = addr_current_max,
 } modbus_slave_addr_t;

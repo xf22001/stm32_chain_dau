@@ -6,7 +6,7 @@
  *   文件名称：channels.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时23分30秒
- *   修改日期：2022年02月21日 星期一 15时20分13秒
+ *   修改日期：2022年06月02日 星期四 14时04分22秒
  *   描    述：
  *
  *================================================================*/
@@ -960,6 +960,7 @@ static void channel_info_deactive_power_module_group(channel_info_t *channel_inf
 			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
 		}
 		list_move_tail(&power_module_group_info->list, &pdu_group_info->power_module_group_deactive_list);
+		debug("remove module group_id %d from channel_id %d", power_module_group_info->group_id, channel_info->channel_id);
 	}
 }
 
@@ -2267,7 +2268,7 @@ static void update_poewr_module_item_info_status(power_module_item_info_t *power
 		over_voltage = 1;
 
 		if((power_module_info->input_aline_voltage > 2750) || (power_module_info->input_bline_voltage > 2750) || (power_module_info->input_cline_voltage > 2750)) {
-			power_module_info->over_voltage_disable = 1;
+			//power_module_info->over_voltage_disable = 1;
 		}
 	}
 
@@ -2520,9 +2521,6 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 		break;
 
 		case POWER_MODULE_ITEM_STATE_ACTIVE: {
-			power_module_item_info->status.setting_output_voltage = power_module_item_info->status.require_output_voltage;
-			power_module_item_info->status.setting_output_current = power_module_item_info->status.require_output_current;
-
 			power_module_item_set_out_voltage_current(power_module_item_info,
 			        power_module_item_info->status.require_output_voltage,
 			        power_module_item_info->status.require_output_current);
@@ -2567,9 +2565,6 @@ static void handle_power_module_item_info_state(power_module_item_info_t *power_
 		break;
 
 		case POWER_MODULE_ITEM_STATE_DEACTIVE: {//停机完成
-			power_module_item_info->status.setting_output_voltage = 0;
-			power_module_item_info->status.setting_output_current = 0;
-
 			power_module_item_set_out_voltage_current(power_module_item_info, 0, 0);
 
 			if(power_module_item_info->status.module_output_voltage <= 500) {

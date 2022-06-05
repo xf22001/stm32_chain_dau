@@ -22,6 +22,10 @@ CONFIG_LIST += STORAGE_OPS_25LC1024
 #CONFIG_LIST += STORAGE_OPS_24LC128
 #CONFIG_LIST += STORAGE_OPS_W25Q256
 
+CONFIG_LIST += SAL_WIZNET
+#CONFIG_LIST += SAL_AT
+#CONFIG_LIST += SAL_DTU
+
 $(foreach config_item,$(CONFIG_LIST),$(eval $(addprefix CONFIG_,$(config_item)) := $(config_item)))
 
 CONFIG_CFLAGS := $(addprefix -D,$(CONFIG_LIST))

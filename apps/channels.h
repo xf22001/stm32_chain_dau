@@ -238,7 +238,7 @@ typedef struct {
 
 typedef struct {
 	uint8_t power_module_type;//power_module_type_t
-	uint16_t rate_current;
+	uint16_t rate_current;//华为模块参考电流 a
 } power_module_settings_t;
 
 typedef struct {
